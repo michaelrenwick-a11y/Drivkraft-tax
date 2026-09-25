@@ -143,7 +143,7 @@ Each phase ends with something runnable *and* meets its UX criteria from `planni
 | Q2 | Hosted storage | SQLite on a Fly volume; switch to Postgres only if needed |
 | Q3 | Demo chat funding | Your key with a monthly cap and rate limits, plus a "use your own key" option |
 | Q4 | Public vs invite-only MCP endpoint | Invite token |
-| Q5 | Repo public from day one? | Private until M2, public at M5. Git remote not set up yet (as of Phase 0) |
+| Q5 | Repo public from day one? | Private until M2, public at M5. Remote: `github.com/michaelrenwick-a11y/Drivkraft-tax` (private, created 2026-09-25) |
 
 ## Nice-to-haves
 - Upstream issues for the OpenTax K-1 gaps in `planning/03`.

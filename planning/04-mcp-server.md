@@ -28,8 +28,8 @@ Legend: **R** read-only · **W** writes to the case · **$** costs money · **P*
 | K-1 / OTD | `intake_k1(case_id, pdf)` | W | doc_id, extraction status, exceptions |
 | | `read_k1(doc_id)` | R | compact OTD summary |
 | | `get_k1_box(doc_id, box, code?)` | R | value, semantic id, statement, evidence ref |
-| | `validate_otd(doc_id)` | R | pass/fail + rule ids |
-| | `bridge_k1(doc_id)` | R | OpenTax input + disposition ledger |
+| | `validate_otd(doc_id)` | R | pass/fail, errors (located to OTD paths), unverified paths |
+| | `bridge_k1(doc_id)` | R | `status` ok/refused, OpenTax item, errors, flags, disposition summary, reconciliation, ledger (opt-in; it's ~70 entries) |
 | | `edit_k1_value(doc_id, path, value, reason)` | W | edit record + re-validation |
 | | `approve_k1(doc_id)` | W | status |
 | Engine | `set_return_inputs(case_id, node_type, data)` | W | input id |
@@ -53,7 +53,7 @@ Legend: **R** read-only · **W** writes to the case · **$** costs money · **P*
 
 ## Resources
 
-`case://{id}` · `k1://{doc_id}` · `k1://{doc_id}/box/{box}` · `note://{id}` · `research://{id}` · `workpaper://{case_id}/v{n}` · `taxonomy://irs-k1-1065-2025`
+`case://{id}` · `k1://{doc_id}` · `k1://{doc_id}/box/{box}` · `k1://{doc_id}/ledger` · `note://{id}` · `research://{id}` · `workpaper://{case_id}/v{n}` · `taxonomy://irs-k1-1065-2025`
 
 ## Prompts (MCP prompt templates)
 
@@ -64,7 +64,8 @@ Legend: **R** read-only · **W** writes to the case · **$** costs money · **P*
 ## Conventions
 
 - Every tool response includes `sources[]` (`{type: k1_box|note|research|workpaper_cell|return_line, ref, label}`) so any client can render citations the same way.
-- Errors are structured: `{code, message, fix_hint}`. There are no bare stack traces, and the UI shows `fix_hint`.
+- Errors are structured: `{code, message, fix_hint}`. Bridge issues already carry `code`, `message`, `path` and `severity` (`server/bridge/translator.py`); `fix_hint` is added per code in Phase 1.5.
+- OTD paths (`part_iii.box_20.Z.statement.qbi`) are the canonical box reference in every tool, resource and `sources[]` entry. There are no bare stack traces, and the UI shows `fix_hint`.
 - Tool descriptions are written for the model: say when to use the tool, what it won't do, and its cost.
 - Demo mode: W tools act on a per-visitor sandbox copy of the seeded case; $ tools return cached answers unless there's an invite token.
 - Every call is logged to `events` (tool, latency, ok/error, cost). That log feeds the operator page.

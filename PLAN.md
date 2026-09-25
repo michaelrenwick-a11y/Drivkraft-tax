@@ -75,17 +75,27 @@ Each phase ends with something runnable *and* meets its UX criteria from `planni
 ### Phase 1.5 — MCP server skeleton *(medium)* · **Status: next**
 - FastMCP server with the first tools: `list_cases`, `list_documents`, `read_k1`, `get_k1_box`, `validate_otd`, `bridge_k1`, `calculate_return`. Resources: `case://{id}`, `k1://{id}`, `k1://{id}/box/{box}`.
 - Runs locally via stdio; add it to Claude Desktop/Code and walk the proof K-1 in conversation.
+- Carried from Phase 1:
+  - Move the Python deps into a root `pyproject.toml` (`mcp`, `fastapi`, `uvicorn`, `PyYAML`) so `uv run` works; keep `bootstrap.sh` installing it.
+  - `validate_otd` and `bridge_k1` wrap `server/bridge` as-is. The bridge's `Issue {code, message, path, severity}` gains a `fix_hint` per code to meet the `04` error convention.
+  - Cases don't exist until Phase 2, so seed one read-only case holding the proof, synthetic and bench-82 K-1s. Then `list_cases`/`read_k1` have something to show.
+  - Flags and ledger paths (e.g. `part_iii.box_13.H`) are the `k1_box` refs in `sources[]`.
 - The web app talks to the same functions over HTTP (FastAPI routes and MCP tools share one implementation).
 - Full tool catalog: `planning/04-mcp-server.md`.
 
 ### Phase 2 — Cases + K-1 intake and review *(large)*
 - Tools: `create_case`, `intake_k1` (PDF → k1-otd pipeline → OTD + artifacts), `edit_k1_value` (original kept, reason required), `approve_k1`.
 - UI: case list; the K-1 review screen (PDF with evidence highlights · box/code table · ledger + exceptions); keyboard-first review. **This is the hero screen**; see `05-ux.md`.
+- The bridge result drives the review screen. Errors block approval, and each links to its OTD path. Flags form the exception list. The ledger feeds the Ledger lens. Every `edit_k1_value` re-runs validate + bridge and stores `docs/<doc_id>/bridge.json`.
+- `approve_k1` requires `status: ok`. `calculation_incomplete` doesn't block approval, but the reviewer has to acknowledge each such flag.
 
 ### Phase 3 — Return calculation *(medium)*
 - Tools: `set_return_inputs`, `calculate_return`, `get_return_lines`, `run_scenario`, `explain_line` (leave-one-out attribution per K-1).
 - UI: return view with line-by-line attribution, a scenario side-by-side comparison, and every number clickable back to its source.
-- Check: reproduce the `93-mfj-w2-k1` benchmark through OTD.
+- Check: reproduce benchmark `82-single-w2-k1-1099r-1099int-1099div` through OTD. This already passes as a test (`test_bench_82_fixture_reproduces_the_benchmark`); Phase 3 runs it through `calculate_return`. (`93-mfj-w2-k1` has no K-1 amounts.)
+- First, find out why a return with only `start` + K-1 shows `line18_total_tax_before_credits: 0` (`reference/UPSTREAM.md`). Scenarios are unreliable until that's explained.
+- Route Box 13 around the engine gap: the bridge emits a list of forms, not one item. Codes A–G go to `schedule_a` (the way upstream benchmarks do it) and H goes to Form 4952 if OpenTax has that node. `mapping.yaml` gains a `node:` key per rule; the ledger and reconciliation stay per field.
+- `explain_line` attributes per K-1 *and* per ledger entry, so a line can be traced back to "Box 11 A of Greenfield".
 
 ### Phase 4 — Chat (web client over MCP) *(medium)*
 - Web chat panel uses the Anthropic API with our MCP server's tools, so it's the same toolset Claude Desktop sees.
@@ -147,6 +157,6 @@ Each phase ends with something runnable *and* meets its UX criteria from `planni
 | Q5 | Repo public from day one? | Private until M2, public at M5. Remote: `github.com/michaelrenwick-a11y/Drivkraft-tax` (private, created 2026-09-25) |
 
 ## Nice-to-haves
-- Upstream issues for the OpenTax K-1 gaps in `planning/03`.
+- Upstream issues for the OpenTax K-1 gaps in `planning/03` (list now concrete: unrouted 13/18/19, silent field stripping, 14A = 0, Box 11 per-code, SSTB/UBIA).
 - More synthetic K-1s to stress the bridge.
 - K-3 once upstream implements it.

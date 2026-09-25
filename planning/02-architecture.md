@@ -14,6 +14,7 @@
 
 - **server** owns all data and logic. `tools/*` are plain functions exposed as MCP tools/resources and as FastAPI routes.
 - **web** is presentation plus the chat route. The chat route gives Claude our MCP tools (the same ones Claude Desktop gets) and streams tool steps and answers to the UI.
+- The bridge (`server/bridge`) sits between OTD and the engine: validate, then map, check constraints, reconcile and flag. The OTD validator runs in a subprocess via a small shim that imports upstream `validate()` and prints JSON. The engine's field allowlist and ≥ 0 rules come from `opentax node inspect` at runtime (cached), so a new pin can't silently drift.
 - The engine and OTD scripts are called through subprocesses with timeouts. A non-zero exit becomes a structured error with a `fix_hint`.
 - OpenTax keeps its state in `./.state/returns` relative to its **cwd**, so every call runs with `cwd=data/cases/<id>/calc/` (one engine store per case, which is also what makes per-visitor demo sandboxes easy). Never run it from the repo root.
 - `run_demo.py` (PDF → OTD) refuses an existing `--out` directory, so each intake gets a fresh `docs/<doc_id>/artifacts/run-<n>/`.
@@ -30,7 +31,7 @@
 ```
 data/cases/<case_id>/
   case.json
-  docs/<doc_id>/source.pdf  artifacts/  edits.jsonl  approved.otd.yaml
+  docs/<doc_id>/source.pdf  artifacts/  edits.jsonl  approved.otd.yaml  bridge.json
   calc/base.json  scenarios/<name>.json
   notes/  research/  proposals/
   workpapers/case-v<n>.xlsx  changesets/

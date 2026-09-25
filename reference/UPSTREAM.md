@@ -5,7 +5,7 @@
 | OTD spec | https://github.com/opentaxdocument/otd-spec | `be6452a` (2026-09-21) | CC BY 4.0 | 2026-09-25 |
 | OpenTax engine | https://github.com/filedcom/opentax | `c4c7d72` (2026-09-24) = release **v2.0.4** | AGPL v3 / commercial | 2026-09-25 |
 
-Fetch with `scripts/bootstrap.sh` (needs git, curl, [uv](https://docs.astral.sh/uv/)). It clones both pins into `vendor/`, downloads the `opentax-<os>-<arch>` release binary for v2.0.4 into `vendor/bin/opentax`, and creates `.venv` (Python 3.11) with the OTD demo requirements (`ruamel.yaml`, `simplejson`, `PyYAML`, `pdfplumber`, `pypdf`). Then run `scripts/smoke.sh`.
+Fetch with `scripts/bootstrap.sh` (needs git, curl, [uv](https://docs.astral.sh/uv/)). It clones both pins into `vendor/`, downloads the `opentax-<os>-<arch>` release binary for v2.0.4 into `vendor/bin/opentax`, and creates `.venv` (Python 3.11) with the OTD demo requirements (`ruamel.yaml`, `simplejson`, `PyYAML`, `pdfplumber`, `pypdf`) plus `server/requirements.txt` (`pytest`). Then run `scripts/smoke.sh`.
 
 Key upstream paths:
 - OTD taxonomy: `taxonomies/irs-k1-1065-2025.yaml`
@@ -16,7 +16,7 @@ Key upstream paths:
 
 ## Upstream verification results
 
-**2026-09-25, `scripts/smoke.sh`: 4/4 pass** (macOS arm64, Python 3.11.16, opentax 2.0.4). Upstream checkouts stay clean after the run.
+**2026-09-25, `scripts/smoke.sh`: 5/5 pass** (the fifth check, `bridge-tests`, was added in Phase 1) (macOS arm64, Python 3.11.16, opentax 2.0.4). Upstream checkouts stay clean after the run.
 
 | Test | Result | Notes |
 |---|---|---|
@@ -28,7 +28,9 @@ Key upstream paths:
 Things learned that matter for later phases:
 - **OpenTax stores state in `./.state/returns` relative to the cwd.** The server must run it from a per-case working dir (e.g. `data/cases/<id>/calc/`), never the repo root.
 - **CLI flow:** `return create --year` → `form add --node_type <type> '<json>'` per form → `return get --json` returns `summary` (7 headline lines) plus `lines` (per-line values, often `[value, value]` arrays) and `forms` (active nodes). Also `return validate` (MeF rules) and `return export --type mef|pdf` for Phase 8.
-- **The `93-mfj-w2-k1` benchmark K-1 carries no amounts**, only `partnership_name`/`partnership_ein`, and `correct.json` has `k1_ordinary: 0`. It proves the node plumbing, not K-1 math. Phase 3's "reproduce the benchmark through OTD" needs a K-1 with real figures; check `95-single-w2-k1-…` and inspect `opentax node inspect --node_type k1_partnership` during Phase 1.
+- **The `93-mfj-w2-k1` benchmark K-1 carries no amounts**, only `partnership_name`/`partnership_ein`. It proves the node plumbing, not K-1 math. **Resolved in Phase 1:** benchmark `82-single-w2-k1-1099r-1099int-1099div` has one K-1 with real amounts (Boxes 1, 2, 5, 6a, 6b, 9a). Its OTD twin `server/tests/fixtures/bench-82-oak-ventures.otd.yaml` bridges to the identical item and reproduces the benchmark within $5 (`test_bench_82_fixture_reproduces_the_benchmark`). That test is the Phase 3 check. Of the 17 K-1 benchmarks, the others use at most Boxes 1, 2, 5, 6a, 6b, 9a, 13 and 14a; several carry many K-1s (56 and 73 have 28 each).
+- **K-1 engine behavior (Phase 1):** one flat item per `form add`; unknown fields silently stripped; ≥ 0, types and `null` rejected; several accepted fields never routed (4c, 13, 18, 19, UBIA/SSTB, and 16 foreign tax without K-3); 14A = 0 treated as missing. Details and consequences are in `planning/03`.
+- **To look at in Phase 3:** a return with only `start` + one `k1_partnership` reports `line18_total_tax_before_credits: 0` even with $2.8M taxable income (the full benchmark 82 return computes correctly). Check which inputs `income_tax_calculation` needs before trusting K-1-only scenarios.
 - Some engine lines round to whole dollars (refund 8053 vs 8053.20). Comparisons need a tolerance.
 - **OpenTax `NOTICE` reserves IRS MeF Software Developer/Transmitter rights** for this codebase to Filed Inc. and its OTTA partners. That's consistent with Phase 8 (export plus `FakeTransmitter` dry run, never submitted), and it's one more reason never to add a real transmission path.
 - The synthetic demo runner refuses an existing `--out` dir and writes intermediates to the system temp dir; `intake_k1` should give it a fresh dir per run.

@@ -64,14 +64,15 @@ Each phase ends with something runnable *and* meets its UX criteria from `planni
 - Web scaffold with the design tokens and app shell from `05-ux.md` (sidebar, header, command palette stub, empty states). The look is set from day one.
 - *Result:* `scripts/smoke.sh` 4/4 pass (OpenTax pin = release v2.0.4; venv needs [uv](https://docs.astral.sh/uv/) for Python 3.11). Web: Next 16.3 + Tailwind 4.3; axe clean on all routes in light and dark; Lighthouse on `/cases` scores 100 accessibility, 100 best practices and 96 performance, with CLS 0; no horizontal scroll at 375 px.
 
-### Phase 1 — OTD → OpenTax bridge *(medium, the core learning piece)* · **Status: next**
+### Phase 1 — OTD → OpenTax bridge *(medium, the core learning piece)* · **Status: done 2026-09-25**
 - `server/bridge/`: `mapping.yaml` + translator + disposition ledger, per `planning/03`.
 - Refuse OTD that fails validation. Keep null ≠ 0. Reconcile the ledger against OTD values.
 - Goldens from the OTD proof doc and the synthetic demo; the hostile fixture is refused.
 - First, settle the open items from Phase 0 (`planning/03`, "To verify in Phase 1"): the `k1_partnerships` array vs. the flat benchmark form, and whether the engine silently drops unknown fields.
 - Build a K-1 fixture with real amounts for the Phase 3 benchmark check. The `93-mfj-w2-k1` K-1 has no amounts, so it only proves the plumbing; check `95-single-w2-k1-…` first.
+- *Result:* `server/bridge/` (mapping.yaml, translator + ledger, validator shim) and `server/engine.py`; 17 tests, added to `scripts/smoke.sh` (5/5 pass). Try it with `.venv/bin/python -m server.bridge <file.otd.yaml> [--ledger]`. Proof and synthetic K-1s bridge and fully reconcile, and the hostile fixture is refused. The OTD twin of benchmark 82's K-1 reproduces that benchmark within $5. Open items resolved: the CLI takes one flat item per `form add` and **silently strips unknown fields**, so the bridge allowlists against the live engine schema. Bigger finding: Box 4c, 13, 18 and 19 (and Box 21 without K-3) are accepted but **never used** in the calculation, and 14A = 0 is treated as missing. See `planning/03`.
 
-### Phase 1.5 — MCP server skeleton *(medium)*
+### Phase 1.5 — MCP server skeleton *(medium)* · **Status: next**
 - FastMCP server with the first tools: `list_cases`, `list_documents`, `read_k1`, `get_k1_box`, `validate_otd`, `bridge_k1`, `calculate_return`. Resources: `case://{id}`, `k1://{id}`, `k1://{id}/box/{box}`.
 - Runs locally via stdio; add it to Claude Desktop/Code and walk the proof K-1 in conversation.
 - The web app talks to the same functions over HTTP (FastAPI routes and MCP tools share one implementation).

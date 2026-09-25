@@ -1,0 +1,142 @@
+# OTD K-1 (Form 1065) → OpenTax `k1_partnership` mapping.
+# Design notes: planning/03-otd-to-opentax-mapping.md. Read against the pinned
+# engine source (forms/f1040/nodes/inputs/k1_partnership/index.ts @ v2.0.4).
+#
+# Every taxonomy node must resolve to a rule here (tests enforce it), so nothing
+# on the K-1 can be dropped silently. A coded box's `default` covers any code
+# not listed under `codes`.
+#
+# Dispositions:
+#   mapped         1:1 into an OpenTax field
+#   collapsed      several codes summed into one OpenTax field (detail stays in the ledger)
+#   derived        computed from a statement or text (e.g. Box 20 Z, Item B)
+#   unsupported    has a 1040 effect OpenTax can't take → sets calculation_incomplete
+#   informational  no 1040 calculation effect (identifiers, checkboxes, basis-only items)
+#
+# A field OpenTax *accepts but never routes* is not sent; its disposition says
+# what the value really does (e.g. box13_deductions is a no-op in v2.0.4).
+
+meta:
+  taxonomy: irs-k1-1065-2025
+  taxonomy_version: 2025.1.1
+  opentax_version: 2.0.4
+  opentax_node: k1_partnership
+
+part_i:
+  default: {disposition: informational}
+  item_a: {disposition: informational, redact: true, note: "Partnership EIN; OpenTax has no field (benchmarks' partnership_ein is stripped by the engine)"}
+  item_b: {disposition: derived, field: partnership_name, derive: first_line, note: "First line of name/address"}
+
+part_ii:
+  default: {disposition: informational}
+  item_e: {disposition: informational, redact: true, note: "Partner TIN"}
+  item_k1: {disposition: informational, note: "Liabilities feed basis (Phase 4 basis tracking), not the 1040"}
+  item_l: {disposition: informational, note: "Capital account is not outside basis; never feed basis_beginning"}
+
+part_iii:
+  box_1: {disposition: mapped, field: box1_ordinary_business}
+  box_2: {disposition: mapped, field: box2_rental_re}
+  box_3: {disposition: mapped, field: box3_other_rental}
+  box_4a: {disposition: mapped, field: box4a_guaranteed_services}
+  box_4b: {disposition: mapped, field: box4b_guaranteed_capital}
+  box_4c: {disposition: informational, note: "Engine sums 4a + 4b and ignores 4c; the bridge reconciles 4a + 4b = 4c instead"}
+  box_5: {disposition: mapped, field: box5_interest}
+  box_6a: {disposition: mapped, field: box6a_ordinary_dividends}
+  box_6b: {disposition: mapped, field: box6b_qualified_dividends}
+  box_6c: {disposition: mapped, field: box6c_dividend_equivalents}
+  box_7: {disposition: mapped, field: box7_royalties}
+  box_8: {disposition: mapped, field: box8_net_st_cap_gain}
+  box_9a: {disposition: mapped, field: box9a_net_lt_cap_gain}
+  box_9b: {disposition: mapped, field: box9b_collectibles_gain, note: "Not the legacy box9b_unrecaptured_1250"}
+  box_9c: {disposition: mapped, field: box9c_unrecaptured_1250}
+  box_10: {disposition: mapped, field: box10_net_1231}
+
+  box_11:
+    # Engine routes box11_other_income to Schedule 1 line 8z as ordinary income.
+    # Only codes that really are ordinary income may be summed into it.
+    default: {disposition: unsupported, note: "Needs its own form or character (capital, §1256, exclusion); summing into line 8z would misstate tax"}
+    codes:
+      A: {disposition: collapsed, field: box11_other_income, note: "Other portfolio income → Schedule 1 line 8z"}
+      J: {disposition: collapsed, field: box11_other_income, note: "Tax benefit recoveries → ordinary income"}
+      R: {disposition: collapsed, field: box11_other_income, note: "Specially allocated ordinary gain → ordinary (Form 4797 Part II line lost)"}
+      E: {disposition: unsupported, note: "COD income needs the §108 / Form 982 exclusion decision"}
+      F: {disposition: unsupported, note: "§743(b) adjustment belongs to the item it relates to"}
+
+  box_12: {disposition: mapped, field: box12_section_179}
+
+  box_13:
+    default: {disposition: unsupported, note: "Engine accepts box13_deductions but never routes it (v2.0.4); Schedule A / Form 4952 routing is a later phase"}
+
+  box_14:
+    codes:
+      A: {disposition: mapped, field: box14a_se_earnings}
+      B: {disposition: informational, note: "Gross farming income; only used for the farm optional method"}
+      C: {disposition: informational, note: "Gross nonfarm income; only used for the nonfarm optional method"}
+    default: {disposition: unsupported}
+
+  box_15:
+    default: {disposition: unsupported, note: "No credit inputs on k1_partnership"}
+
+  box_16: {disposition: informational, note: "K-3 attached checkbox; OpenTax box16_* fields follow the pre-2021 layout"}
+
+  box_17:
+    default: {disposition: unsupported}
+    codes:
+      A: {disposition: collapsed, field: box17_amt_adjustment, note: "→ Form 6251 other adjustments"}
+      B: {disposition: collapsed, field: box17_amt_adjustment}
+      C: {disposition: collapsed, field: box17_amt_adjustment}
+      F: {disposition: collapsed, field: box17_amt_adjustment}
+      D: {disposition: unsupported, note: "Gross income for the oil & gas preference, not an adjustment"}
+      E: {disposition: unsupported, note: "Deductions for the oil & gas preference, not an adjustment"}
+
+  box_18:
+    default: {disposition: unsupported}
+    codes:
+      A: {disposition: unsupported, note: "Tax-exempt interest → 1040 line 2a (and Social Security taxability); engine ignores box18"}
+      B: {disposition: informational, note: "Other tax-exempt income; basis only"}
+      C: {disposition: informational, note: "Nondeductible expenses; basis only, never income"}
+
+  box_19:
+    default: {disposition: informational, note: "Distributions reduce basis; engine has no basis tracking yet"}
+    codes:
+      F: {disposition: unsupported, note: "Taxable portion of property distributed for services is income"}
+
+  box_20:
+    default: {disposition: unsupported, note: "Feeds a form OpenTax doesn't take from the K-1 (recapture, look-back, §1061, EBL, ...)"}
+    codes:
+      Z:
+        disposition: derived
+        note: "From the §199A statement; engine routes QBI and W-2 wages to Form 8995"
+        statement:
+          qbi: {field: box20z_qbi}
+          w2_wages: {field: box20_w2_wages}
+          ubia: {field: box20_ubia, note: "Accepted, unused by the simplified 8995 path"}
+          sstb: {field: box20_sstb, note: "Accepted, unused in v2.0.4: an SSTB above the threshold is overstated", unsupported_when_true: true}
+      A: {disposition: informational, note: "Form 4952 input; matters only with Box 13 H"}
+      B: {disposition: informational, note: "Form 4952 input; matters only with Box 13 H"}
+      E: {disposition: informational}
+      N: {disposition: informational, note: "§163(j) business interest; partnership-level"}
+      U: {disposition: informational}
+      V: {disposition: informational}
+      W: {disposition: informational}
+      X: {disposition: informational}
+      Y: {disposition: informational, note: "Engine computes Form 8960 from the boxes"}
+      AA: {disposition: informational}
+      AB: {disposition: informational, note: "Matters only on sale of the interest"}
+      AC: {disposition: informational, note: "Matters only on sale of the interest"}
+      AD: {disposition: informational, note: "Matters only on sale of the interest"}
+      AE: {disposition: informational}
+      AF: {disposition: informational}
+      AG: {disposition: informational}
+      AL: {disposition: informational}
+      AN: {disposition: informational}
+      AO: {disposition: informational}
+      AR: {disposition: informational}
+      AW: {disposition: informational}
+      AX: {disposition: informational}
+      AY: {disposition: informational}
+      AZ: {disposition: informational}
+
+  box_21: {disposition: unsupported, note: "Engine routes foreign tax to Form 1116 only with K-3 income + category, which isn't implemented"}
+  box_22: {disposition: informational, note: "More than one at-risk activity (Form 6198)"}
+  box_23: {disposition: informational, note: "More than one passive activity; not the passive status itself"}

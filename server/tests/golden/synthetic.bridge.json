@@ -1,0 +1,979 @@
+{
+  "status": "ok",
+  "source": {
+    "path": "output.otd.yaml",
+    "sha256": "2df0cd1e859c64a48a4d548db14de6f762210ef569db93604110b7fb8ec3c663",
+    "document_id": "f5038fa0-ea0a-56d1-ba13-dfeac4403491",
+    "taxonomy": "irs-k1-1065-2025@2025.1.1"
+  },
+  "calculation_incomplete": true,
+  "opentax": {
+    "node_type": "k1_partnership",
+    "item": {
+      "partnership_name": "COPPERLEAF REAL ESTATE FUND V, L.P.",
+      "box1_ordinary_business": 556000.0,
+      "box2_rental_re": 28800.0,
+      "box3_other_rental": 4800.0,
+      "box4a_guaranteed_services": 500.0,
+      "box4b_guaranteed_capital": 500.0,
+      "box5_interest": 434000.0,
+      "box6a_ordinary_dividends": 253000.0,
+      "box6b_qualified_dividends": 123500.0,
+      "box6c_dividend_equivalents": 52700.0,
+      "box7_royalties": 800.0,
+      "box8_net_st_cap_gain": 94000.0,
+      "box9a_net_lt_cap_gain": 897700.0,
+      "box9b_collectibles_gain": 394600.0,
+      "box9c_unrecaptured_1250": 95300.0,
+      "box10_net_1231": 16100.0,
+      "box11_other_income": 600700.0,
+      "box12_section_179": 75000.0,
+      "box14a_se_earnings": 104600.0,
+      "box17_amt_adjustment": 96200.0
+    }
+  },
+  "errors": [],
+  "flags": [
+    {
+      "code": "unverified_value",
+      "message": "Source value unverified; omitted from the calculation",
+      "path": "part_i.item_c",
+      "severity": "warning"
+    },
+    {
+      "code": "unverified_value",
+      "message": "Source value unverified; omitted from the calculation",
+      "path": "part_ii.item_h2",
+      "severity": "warning"
+    },
+    {
+      "code": "unverified_value",
+      "message": "Source value unverified; omitted from the calculation",
+      "path": "part_ii.item_l",
+      "severity": "warning"
+    },
+    {
+      "code": "unverified_value",
+      "message": "Source value unverified; omitted from the calculation",
+      "path": "part_iii.box_4c",
+      "severity": "warning"
+    },
+    {
+      "code": "calculation_incomplete",
+      "message": "Box 11 C (Section 1256 contracts and straddles) isn't in the calculation: Needs its own form or character (capital, §1256, exclusion); summing into line 8z would misstate tax",
+      "path": "part_iii.box_11.C",
+      "severity": "warning"
+    },
+    {
+      "code": "calculation_incomplete",
+      "message": "Box 11 S (Non-portfolio capital gain (loss)) isn't in the calculation: Needs its own form or character (capital, §1256, exclusion); summing into line 8z would misstate tax",
+      "path": "part_iii.box_11.S",
+      "severity": "warning"
+    },
+    {
+      "code": "calculation_incomplete",
+      "message": "Box 13 A (Cash contributions (60%)) isn't in the calculation: Engine accepts box13_deductions but never routes it (v2.0.4); Schedule A / Form 4952 routing is a later phase",
+      "path": "part_iii.box_13.A",
+      "severity": "warning"
+    },
+    {
+      "code": "calculation_incomplete",
+      "message": "Box 13 B (Cash contributions (30%)) isn't in the calculation: Engine accepts box13_deductions but never routes it (v2.0.4); Schedule A / Form 4952 routing is a later phase",
+      "path": "part_iii.box_13.B",
+      "severity": "warning"
+    },
+    {
+      "code": "calculation_incomplete",
+      "message": "Box 13 AE (Deductions — portfolio income) isn't in the calculation: Engine accepts box13_deductions but never routes it (v2.0.4); Schedule A / Form 4952 routing is a later phase",
+      "path": "part_iii.box_13.AE",
+      "severity": "warning"
+    },
+    {
+      "code": "calculation_incomplete",
+      "message": "Box 13 H (Investment interest expense) isn't in the calculation: Engine accepts box13_deductions but never routes it (v2.0.4); Schedule A / Form 4952 routing is a later phase",
+      "path": "part_iii.box_13.H",
+      "severity": "warning"
+    },
+    {
+      "code": "calculation_incomplete",
+      "message": "Box 13 R (Pensions and IRAs) isn't in the calculation: Engine accepts box13_deductions but never routes it (v2.0.4); Schedule A / Form 4952 routing is a later phase",
+      "path": "part_iii.box_13.R",
+      "severity": "warning"
+    },
+    {
+      "code": "calculation_incomplete",
+      "message": "Box 15 A (Zero-emission nuclear power production credit) isn't in the calculation: No credit inputs on k1_partnership",
+      "path": "part_iii.box_15.A",
+      "severity": "warning"
+    },
+    {
+      "code": "calculation_incomplete",
+      "message": "Box 18 A (Tax-exempt interest income) isn't in the calculation: Tax-exempt interest → 1040 line 2a (and Social Security taxability); engine ignores box18",
+      "path": "part_iii.box_18.A",
+      "severity": "warning"
+    },
+    {
+      "code": "calculation_incomplete",
+      "message": "Box 21 (Foreign taxes paid or accrued) isn't in the calculation: Engine routes foreign tax to Form 1116 only with K-3 income + category, which isn't implemented",
+      "path": "part_iii.box_21",
+      "severity": "warning"
+    }
+  ],
+  "summary": {
+    "collapsed": 3,
+    "derived": 1,
+    "informational": 26,
+    "mapped": 17,
+    "unsupported": 10
+  },
+  "reconciliation": {
+    "fields": {
+      "box1_ordinary_business": {
+        "sent": 556000.0,
+        "ledger": 556000.0,
+        "ok": true
+      },
+      "box2_rental_re": {
+        "sent": 28800.0,
+        "ledger": 28800.0,
+        "ok": true
+      },
+      "box3_other_rental": {
+        "sent": 4800.0,
+        "ledger": 4800.0,
+        "ok": true
+      },
+      "box4a_guaranteed_services": {
+        "sent": 500.0,
+        "ledger": 500.0,
+        "ok": true
+      },
+      "box4b_guaranteed_capital": {
+        "sent": 500.0,
+        "ledger": 500.0,
+        "ok": true
+      },
+      "box5_interest": {
+        "sent": 434000.0,
+        "ledger": 434000.0,
+        "ok": true
+      },
+      "box6a_ordinary_dividends": {
+        "sent": 253000.0,
+        "ledger": 253000.0,
+        "ok": true
+      },
+      "box6b_qualified_dividends": {
+        "sent": 123500.0,
+        "ledger": 123500.0,
+        "ok": true
+      },
+      "box6c_dividend_equivalents": {
+        "sent": 52700.0,
+        "ledger": 52700.0,
+        "ok": true
+      },
+      "box7_royalties": {
+        "sent": 800.0,
+        "ledger": 800.0,
+        "ok": true
+      },
+      "box8_net_st_cap_gain": {
+        "sent": 94000.0,
+        "ledger": 94000.0,
+        "ok": true
+      },
+      "box9a_net_lt_cap_gain": {
+        "sent": 897700.0,
+        "ledger": 897700.0,
+        "ok": true
+      },
+      "box9b_collectibles_gain": {
+        "sent": 394600.0,
+        "ledger": 394600.0,
+        "ok": true
+      },
+      "box9c_unrecaptured_1250": {
+        "sent": 95300.0,
+        "ledger": 95300.0,
+        "ok": true
+      },
+      "box10_net_1231": {
+        "sent": 16100.0,
+        "ledger": 16100.0,
+        "ok": true
+      },
+      "box11_other_income": {
+        "sent": 600700.0,
+        "ledger": 600700.0,
+        "ok": true
+      },
+      "box12_section_179": {
+        "sent": 75000.0,
+        "ledger": 75000.0,
+        "ok": true
+      },
+      "box14a_se_earnings": {
+        "sent": 104600.0,
+        "ledger": 104600.0,
+        "ok": true
+      },
+      "box17_amt_adjustment": {
+        "sent": 96200.0,
+        "ledger": 96200.0,
+        "ok": true
+      }
+    },
+    "boxes": {
+      "1": {
+        "otd": 556000.0,
+        "ledger": 556000.0,
+        "entries": 1,
+        "ok": true
+      },
+      "2": {
+        "otd": 28800.0,
+        "ledger": 28800.0,
+        "entries": 1,
+        "ok": true
+      },
+      "3": {
+        "otd": 4800.0,
+        "ledger": 4800.0,
+        "entries": 1,
+        "ok": true
+      },
+      "4a": {
+        "otd": 500.0,
+        "ledger": 500.0,
+        "entries": 1,
+        "ok": true
+      },
+      "4b": {
+        "otd": 500.0,
+        "ledger": 500.0,
+        "entries": 1,
+        "ok": true
+      },
+      "5": {
+        "otd": 434000.0,
+        "ledger": 434000.0,
+        "entries": 1,
+        "ok": true
+      },
+      "6a": {
+        "otd": 253000.0,
+        "ledger": 253000.0,
+        "entries": 1,
+        "ok": true
+      },
+      "6b": {
+        "otd": 123500.0,
+        "ledger": 123500.0,
+        "entries": 1,
+        "ok": true
+      },
+      "6c": {
+        "otd": 52700.0,
+        "ledger": 52700.0,
+        "entries": 1,
+        "ok": true
+      },
+      "7": {
+        "otd": 800.0,
+        "ledger": 800.0,
+        "entries": 1,
+        "ok": true
+      },
+      "8": {
+        "otd": 94000.0,
+        "ledger": 94000.0,
+        "entries": 1,
+        "ok": true
+      },
+      "9a": {
+        "otd": 897700.0,
+        "ledger": 897700.0,
+        "entries": 1,
+        "ok": true
+      },
+      "9b": {
+        "otd": 394600.0,
+        "ledger": 394600.0,
+        "entries": 1,
+        "ok": true
+      },
+      "9c": {
+        "otd": 95300.0,
+        "ledger": 95300.0,
+        "entries": 1,
+        "ok": true
+      },
+      "10": {
+        "otd": 16100.0,
+        "ledger": 16100.0,
+        "entries": 1,
+        "ok": true
+      },
+      "11": {
+        "otd": 1558200.0,
+        "ledger": 1558200.0,
+        "entries": 3,
+        "ok": true
+      },
+      "12": {
+        "otd": 75000.0,
+        "ledger": 75000.0,
+        "entries": 1,
+        "ok": true
+      },
+      "13": {
+        "otd": -570100.0,
+        "ledger": -570100.0,
+        "entries": 5,
+        "ok": true
+      },
+      "14": {
+        "otd": 104600.0,
+        "ledger": 104600.0,
+        "entries": 1,
+        "ok": true
+      },
+      "15": {
+        "otd": 1800.0,
+        "ledger": 1800.0,
+        "entries": 1,
+        "ok": true
+      },
+      "17": {
+        "otd": 96200.0,
+        "ledger": 96200.0,
+        "entries": 2,
+        "ok": true
+      },
+      "18": {
+        "otd": 160000.0,
+        "ledger": 160000.0,
+        "entries": 2,
+        "ok": true
+      },
+      "19": {
+        "otd": 27000.0,
+        "ledger": 27000.0,
+        "entries": 1,
+        "ok": true
+      },
+      "20": {
+        "otd": 2595600.0,
+        "ledger": 2595600.0,
+        "entries": 3,
+        "ok": true
+      },
+      "21": {
+        "otd": 267500.0,
+        "ledger": 267500.0,
+        "entries": 1,
+        "ok": true
+      }
+    }
+  },
+  "ledger": [
+    {
+      "path": "part_i.item_a",
+      "box": "A",
+      "semantic_id": "partnership.ein",
+      "label": "Partnership's employer identification number (EIN)",
+      "value": "[redacted]",
+      "disposition": "informational",
+      "note": "Partnership EIN; OpenTax has no field (benchmarks' partnership_ein is stripped by the engine)",
+      "unverified": false
+    },
+    {
+      "path": "part_i.item_b",
+      "box": "B",
+      "semantic_id": "partnership.name_address",
+      "label": "Partnership's name, address, city, state, and ZIP code",
+      "value": "COPPERLEAF REAL ESTATE FUND V, L.P.\n5255 LAKE CIR\nST LOUIS, MO 63150",
+      "disposition": "derived",
+      "field": "partnership_name",
+      "note": "First line of name/address",
+      "unverified": false
+    },
+    {
+      "path": "part_i.item_c",
+      "box": "C",
+      "semantic_id": "partnership.irs_center",
+      "label": "IRS Center where partnership filed return",
+      "value": null,
+      "disposition": "informational",
+      "unverified": true
+    },
+    {
+      "path": "part_i.item_d",
+      "box": "D",
+      "semantic_id": "partnership.publicly_traded",
+      "label": "Check if this is a publicly traded partnership (PTP)",
+      "value": false,
+      "disposition": "informational",
+      "unverified": false
+    },
+    {
+      "path": "part_ii.item_e",
+      "box": "E",
+      "semantic_id": "partner.identifying_number",
+      "label": "Partner's identifying number (SSN or TIN)",
+      "value": "[redacted]",
+      "disposition": "informational",
+      "note": "Partner TIN",
+      "unverified": false
+    },
+    {
+      "path": "part_ii.item_f",
+      "box": "F",
+      "semantic_id": "partner.name_address",
+      "label": "Partner's name, address, city, state, and ZIP code",
+      "value": "MERIDIAN REAL ASSETS AGGREGATOR, L.P.\n5981 JUNIPER RD\nROCHESTER, NY 14633",
+      "disposition": "informational",
+      "unverified": false
+    },
+    {
+      "path": "part_ii.item_g",
+      "box": "G",
+      "semantic_id": "partner.general_or_limited",
+      "label": "General partner or LLC member-manager / Limited partner or other LLC member",
+      "value": "limited_or_other_member",
+      "disposition": "informational",
+      "unverified": false
+    },
+    {
+      "path": "part_ii.item_h1",
+      "box": "H1",
+      "semantic_id": "partner.domestic_or_foreign",
+      "label": "Domestic partner / Foreign partner",
+      "value": "domestic",
+      "disposition": "informational",
+      "unverified": false
+    },
+    {
+      "path": "part_ii.item_h2",
+      "box": "H2",
+      "semantic_id": "partner.disregarded_entity_info",
+      "label": "If the partner is a disregarded entity (DE), enter the partner's TIN and name",
+      "value": null,
+      "disposition": "informational",
+      "unverified": true
+    },
+    {
+      "path": "part_ii.item_i1",
+      "box": "I1",
+      "semantic_id": "partner.entity_type",
+      "label": "What type of entity is this partner?",
+      "value": "partnership",
+      "disposition": "informational",
+      "unverified": false
+    },
+    {
+      "path": "part_ii.item_i2",
+      "box": "I2",
+      "semantic_id": "partner.retirement_plan",
+      "label": "If this partner is a retirement plan (IRA/SEP/Keogh/etc.), check here",
+      "value": false,
+      "disposition": "informational",
+      "unverified": false
+    },
+    {
+      "path": "part_ii.item_j",
+      "box": "J",
+      "semantic_id": "partner.share_percentages",
+      "label": "Partner's share of profit, loss, and capital",
+      "value": {
+        "profit_beginning": 1.0,
+        "profit_ending": 1.0,
+        "loss_beginning": 1.0,
+        "loss_ending": 1.0,
+        "capital_beginning": 1.0,
+        "capital_ending": 1.0,
+        "decrease_due_to_sale": false,
+        "decrease_due_to_exchange": false
+      },
+      "disposition": "informational",
+      "unverified": false
+    },
+    {
+      "path": "part_ii.item_k1",
+      "box": "K1",
+      "semantic_id": "partner.share_of_liabilities",
+      "label": "Partner's share of liabilities",
+      "value": {
+        "nonrecourse_beginning": 39700.0,
+        "nonrecourse_ending": 51600.0,
+        "qualified_nonrecourse_beginning": 10000.0,
+        "qualified_nonrecourse_ending": 52600.0,
+        "recourse_beginning": 80000.0,
+        "recourse_ending": 5100.0
+      },
+      "disposition": "informational",
+      "note": "Liabilities feed basis (Phase 4 basis tracking), not the 1040",
+      "unverified": false
+    },
+    {
+      "path": "part_ii.item_k2",
+      "box": "K2",
+      "semantic_id": "partner.liabilities_from_lower_tier_partnerships",
+      "label": "Check this box if item K1 includes liability amounts from lower-tier partnerships",
+      "value": false,
+      "disposition": "informational",
+      "unverified": false
+    },
+    {
+      "path": "part_ii.item_k3",
+      "box": "K3",
+      "semantic_id": "partner.liabilities_subject_to_guarantees_or_payment_obligations",
+      "label": "Check if any of the above liability is subject to guarantees or other payment obligations by the partner",
+      "value": false,
+      "disposition": "informational",
+      "unverified": false
+    },
+    {
+      "path": "part_ii.item_l",
+      "box": "L",
+      "semantic_id": "partner.capital_account_analysis",
+      "label": "Partner's capital account analysis",
+      "value": null,
+      "disposition": "informational",
+      "note": "Capital account is not outside basis; never feed basis_beginning",
+      "unverified": true
+    },
+    {
+      "path": "part_ii.item_m",
+      "box": "M",
+      "semantic_id": "partner.contributed_property_built_in_gain_loss",
+      "label": "Did the partner contribute property with a built-in gain or loss?",
+      "value": false,
+      "disposition": "informational",
+      "unverified": false
+    },
+    {
+      "path": "part_ii.item_n",
+      "box": "N",
+      "semantic_id": "partner.net_unrecognized_section_704c_gain_loss",
+      "label": "Partner's Share of Net Unrecognized Section 704(c) Gain or (Loss)",
+      "value": {
+        "beginning": 30900.0,
+        "ending": 11800.0
+      },
+      "disposition": "informational",
+      "unverified": false
+    },
+    {
+      "path": "part_iii.box_1",
+      "box": "1",
+      "semantic_id": "ordinary_business_income",
+      "label": "Ordinary business income (loss)",
+      "value": 556000.0,
+      "disposition": "mapped",
+      "field": "box1_ordinary_business",
+      "unverified": false
+    },
+    {
+      "path": "part_iii.box_2",
+      "box": "2",
+      "semantic_id": "net_rental_real_estate_income",
+      "label": "Net rental real estate income (loss)",
+      "value": 28800.0,
+      "disposition": "mapped",
+      "field": "box2_rental_re",
+      "unverified": false
+    },
+    {
+      "path": "part_iii.box_3",
+      "box": "3",
+      "semantic_id": "other_net_rental_income",
+      "label": "Other net rental income (loss)",
+      "value": 4800.0,
+      "disposition": "mapped",
+      "field": "box3_other_rental",
+      "unverified": false
+    },
+    {
+      "path": "part_iii.box_4a",
+      "box": "4a",
+      "semantic_id": "guaranteed_payments_services",
+      "label": "Guaranteed payments for services",
+      "value": 500.0,
+      "disposition": "mapped",
+      "field": "box4a_guaranteed_services",
+      "unverified": false
+    },
+    {
+      "path": "part_iii.box_4b",
+      "box": "4b",
+      "semantic_id": "guaranteed_payments_capital",
+      "label": "Guaranteed payments for capital",
+      "value": 500.0,
+      "disposition": "mapped",
+      "field": "box4b_guaranteed_capital",
+      "unverified": false
+    },
+    {
+      "path": "part_iii.box_4c",
+      "box": "4c",
+      "semantic_id": "guaranteed_payments_total",
+      "label": "Total guaranteed payments",
+      "value": null,
+      "disposition": "informational",
+      "note": "Engine sums 4a + 4b and ignores 4c; the bridge reconciles 4a + 4b = 4c instead",
+      "unverified": true
+    },
+    {
+      "path": "part_iii.box_5",
+      "box": "5",
+      "semantic_id": "interest_income",
+      "label": "Interest income",
+      "value": 434000.0,
+      "disposition": "mapped",
+      "field": "box5_interest",
+      "unverified": false
+    },
+    {
+      "path": "part_iii.box_6a",
+      "box": "6a",
+      "semantic_id": "ordinary_dividends",
+      "label": "Ordinary dividends",
+      "value": 253000.0,
+      "disposition": "mapped",
+      "field": "box6a_ordinary_dividends",
+      "unverified": false
+    },
+    {
+      "path": "part_iii.box_6b",
+      "box": "6b",
+      "semantic_id": "qualified_dividends",
+      "label": "Qualified dividends",
+      "value": 123500.0,
+      "disposition": "mapped",
+      "field": "box6b_qualified_dividends",
+      "unverified": false
+    },
+    {
+      "path": "part_iii.box_6c",
+      "box": "6c",
+      "semantic_id": "dividend_equivalents",
+      "label": "Dividend equivalents",
+      "value": 52700.0,
+      "disposition": "mapped",
+      "field": "box6c_dividend_equivalents",
+      "unverified": false
+    },
+    {
+      "path": "part_iii.box_7",
+      "box": "7",
+      "semantic_id": "royalties",
+      "label": "Royalties",
+      "value": 800.0,
+      "disposition": "mapped",
+      "field": "box7_royalties",
+      "unverified": false
+    },
+    {
+      "path": "part_iii.box_8",
+      "box": "8",
+      "semantic_id": "net_short_term_capital_gain",
+      "label": "Net short-term capital gain (loss)",
+      "value": 94000.0,
+      "disposition": "mapped",
+      "field": "box8_net_st_cap_gain",
+      "unverified": false
+    },
+    {
+      "path": "part_iii.box_9a",
+      "box": "9a",
+      "semantic_id": "net_long_term_capital_gain",
+      "label": "Net long-term capital gain (loss)",
+      "value": 897700.0,
+      "disposition": "mapped",
+      "field": "box9a_net_lt_cap_gain",
+      "unverified": false
+    },
+    {
+      "path": "part_iii.box_9b",
+      "box": "9b",
+      "semantic_id": "collectibles_gain",
+      "label": "Collectibles (28%) gain (loss)",
+      "value": 394600.0,
+      "disposition": "mapped",
+      "field": "box9b_collectibles_gain",
+      "note": "Not the legacy box9b_unrecaptured_1250",
+      "unverified": false
+    },
+    {
+      "path": "part_iii.box_9c",
+      "box": "9c",
+      "semantic_id": "unrecaptured_section_1250_gain",
+      "label": "Unrecaptured section 1250 gain",
+      "value": 95300.0,
+      "disposition": "mapped",
+      "field": "box9c_unrecaptured_1250",
+      "unverified": false
+    },
+    {
+      "path": "part_iii.box_10",
+      "box": "10",
+      "semantic_id": "net_section_1231_gain",
+      "label": "Net section 1231 gain (loss)",
+      "value": 16100.0,
+      "disposition": "mapped",
+      "field": "box10_net_1231",
+      "unverified": false
+    },
+    {
+      "path": "part_iii.box_11.A",
+      "box": "11",
+      "code": "A",
+      "semantic_id": "other_income.portfolio",
+      "label": "Other portfolio income (loss)",
+      "value": 600700.0,
+      "disposition": "collapsed",
+      "field": "box11_other_income",
+      "note": "Other portfolio income → Schedule 1 line 8z",
+      "unverified": false
+    },
+    {
+      "path": "part_iii.box_11.C",
+      "box": "11",
+      "code": "C",
+      "semantic_id": "other_income.section_1256_contracts",
+      "label": "Section 1256 contracts and straddles",
+      "value": 218800.0,
+      "disposition": "unsupported",
+      "note": "Needs its own form or character (capital, §1256, exclusion); summing into line 8z would misstate tax",
+      "unverified": false
+    },
+    {
+      "path": "part_iii.box_11.S",
+      "box": "11",
+      "code": "S",
+      "semantic_id": "other_income.non_portfolio_capital",
+      "label": "Non-portfolio capital gain (loss)",
+      "value": 738700.0,
+      "disposition": "unsupported",
+      "note": "Needs its own form or character (capital, §1256, exclusion); summing into line 8z would misstate tax",
+      "unverified": false
+    },
+    {
+      "path": "part_iii.box_12",
+      "box": "12",
+      "semantic_id": "section_179_deduction",
+      "label": "Section 179 deduction",
+      "value": 75000.0,
+      "disposition": "mapped",
+      "field": "box12_section_179",
+      "unverified": false
+    },
+    {
+      "path": "part_iii.box_13.A",
+      "box": "13",
+      "code": "A",
+      "semantic_id": "other_deductions.cash_contributions_60",
+      "label": "Cash contributions (60%)",
+      "value": 29400.0,
+      "disposition": "unsupported",
+      "note": "Engine accepts box13_deductions but never routes it (v2.0.4); Schedule A / Form 4952 routing is a later phase",
+      "unverified": false
+    },
+    {
+      "path": "part_iii.box_13.B",
+      "box": "13",
+      "code": "B",
+      "semantic_id": "other_deductions.cash_contributions_30",
+      "label": "Cash contributions (30%)",
+      "value": 56300.0,
+      "disposition": "unsupported",
+      "note": "Engine accepts box13_deductions but never routes it (v2.0.4); Schedule A / Form 4952 routing is a later phase",
+      "unverified": false
+    },
+    {
+      "path": "part_iii.box_13.AE",
+      "box": "13",
+      "code": "AE",
+      "semantic_id": "other_deductions.portfolio_deductions",
+      "label": "Deductions — portfolio income",
+      "value": -290600.0,
+      "disposition": "unsupported",
+      "note": "Engine accepts box13_deductions but never routes it (v2.0.4); Schedule A / Form 4952 routing is a later phase",
+      "unverified": false
+    },
+    {
+      "path": "part_iii.box_13.H",
+      "box": "13",
+      "code": "H",
+      "semantic_id": "other_deductions.investment_interest",
+      "label": "Investment interest expense",
+      "value": -313000.0,
+      "disposition": "unsupported",
+      "note": "Engine accepts box13_deductions but never routes it (v2.0.4); Schedule A / Form 4952 routing is a later phase",
+      "unverified": false
+    },
+    {
+      "path": "part_iii.box_13.R",
+      "box": "13",
+      "code": "R",
+      "semantic_id": "other_deductions.pensions_iras",
+      "label": "Pensions and IRAs",
+      "value": -52200.0,
+      "disposition": "unsupported",
+      "note": "Engine accepts box13_deductions but never routes it (v2.0.4); Schedule A / Form 4952 routing is a later phase",
+      "unverified": false
+    },
+    {
+      "path": "part_iii.box_14.A",
+      "box": "14",
+      "code": "A",
+      "semantic_id": "self_employment.net_earnings",
+      "label": "Net earnings (loss) from self-employment",
+      "value": 104600.0,
+      "disposition": "mapped",
+      "field": "box14a_se_earnings",
+      "unverified": false
+    },
+    {
+      "path": "part_iii.box_15.A",
+      "box": "15",
+      "code": "A",
+      "semantic_id": "credits.zero_emission_nuclear",
+      "label": "Zero-emission nuclear power production credit",
+      "value": 1800.0,
+      "disposition": "unsupported",
+      "note": "No credit inputs on k1_partnership",
+      "unverified": false
+    },
+    {
+      "path": "part_iii.box_16",
+      "box": "16",
+      "semantic_id": "international_transactions",
+      "label": "Schedule K-3 is attached if checked",
+      "value": false,
+      "disposition": "informational",
+      "note": "K-3 attached checkbox; OpenTax box16_* fields follow the pre-2021 layout",
+      "unverified": false
+    },
+    {
+      "path": "part_iii.box_17.A",
+      "box": "17",
+      "code": "A",
+      "semantic_id": "amt.depreciation_adjustment",
+      "label": "Post-1986 depreciation adjustment",
+      "value": 79000.0,
+      "disposition": "collapsed",
+      "field": "box17_amt_adjustment",
+      "note": "→ Form 6251 other adjustments",
+      "unverified": false
+    },
+    {
+      "path": "part_iii.box_17.B",
+      "box": "17",
+      "code": "B",
+      "semantic_id": "amt.adjusted_gain_loss",
+      "label": "Adjusted gain or loss",
+      "value": 17200.0,
+      "disposition": "collapsed",
+      "field": "box17_amt_adjustment",
+      "unverified": false
+    },
+    {
+      "path": "part_iii.box_18.A",
+      "box": "18",
+      "code": "A",
+      "semantic_id": "tax_exempt.interest",
+      "label": "Tax-exempt interest income",
+      "value": 118800.0,
+      "disposition": "unsupported",
+      "note": "Tax-exempt interest → 1040 line 2a (and Social Security taxability); engine ignores box18",
+      "unverified": false
+    },
+    {
+      "path": "part_iii.box_18.C",
+      "box": "18",
+      "code": "C",
+      "semantic_id": "nondeductible.expenses",
+      "label": "Nondeductible expenses",
+      "value": 41200.0,
+      "disposition": "informational",
+      "note": "Nondeductible expenses; basis only, never income",
+      "unverified": false
+    },
+    {
+      "path": "part_iii.box_19.A",
+      "box": "19",
+      "code": "A",
+      "semantic_id": "distributions.cash_marketable_securities",
+      "label": "Cash and marketable securities other than for services",
+      "value": 27000.0,
+      "disposition": "informational",
+      "note": "Distributions reduce basis; engine has no basis tracking yet",
+      "unverified": false
+    },
+    {
+      "path": "part_iii.box_20.A",
+      "box": "20",
+      "code": "A",
+      "semantic_id": "other_information.investment_income",
+      "label": "Investment income",
+      "value": 2317700.0,
+      "disposition": "informational",
+      "note": "Form 4952 input; matters only with Box 13 H",
+      "unverified": false
+    },
+    {
+      "path": "part_iii.box_20.B",
+      "box": "20",
+      "code": "B",
+      "semantic_id": "other_information.investment_expenses",
+      "label": "Investment expenses",
+      "value": -112600.0,
+      "disposition": "informational",
+      "note": "Form 4952 input; matters only with Box 13 H",
+      "unverified": false
+    },
+    {
+      "path": "part_iii.box_20.AG",
+      "box": "20",
+      "code": "AG",
+      "semantic_id": "other_information.gross_receipts_448c",
+      "label": "Gross receipts for section 448(c)",
+      "value": 390500.0,
+      "disposition": "informational",
+      "unverified": false
+    },
+    {
+      "path": "part_iii.box_21",
+      "box": "21",
+      "semantic_id": "foreign_taxes_paid_accrued",
+      "label": "Foreign taxes paid or accrued",
+      "value": 267500.0,
+      "disposition": "unsupported",
+      "note": "Engine routes foreign tax to Form 1116 only with K-3 income + category, which isn't implemented",
+      "unverified": false
+    },
+    {
+      "path": "part_iii.box_22",
+      "box": "22",
+      "semantic_id": "at_risk_activities",
+      "label": "More than one activity for at-risk purposes",
+      "value": false,
+      "disposition": "informational",
+      "note": "More than one at-risk activity (Form 6198)",
+      "unverified": false
+    },
+    {
+      "path": "part_iii.box_23",
+      "box": "23",
+      "semantic_id": "passive_activities",
+      "label": "More than one activity for passive activity purposes",
+      "value": false,
+      "disposition": "informational",
+      "note": "More than one passive activity; not the passive status itself",
+      "unverified": false
+    }
+  ]
+}

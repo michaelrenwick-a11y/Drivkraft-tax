@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Phase 0 smoke tests against the pinned upstream code. Run after bootstrap.sh.
+# Smoke tests against the pinned upstream code. Run after bootstrap.sh.
 # Outputs land in data/smoke/<timestamp>/; results summary is printed at the end.
 set -uo pipefail
 
@@ -67,6 +67,9 @@ for k in sorted(set(summary) & set(correct) - {"line24_total_tax", "line35a_refu
 print(f"return {rid}")
 sys.exit(1 if bad else 0)
 PYEOF
+
+# 5. Bridge tests (OTD → OpenTax goldens, refusals, benchmark 82 through OTD)
+check bridge-tests "$PY" -m pytest -q "$ROOT/server/tests"
 
 printf '\nSmoke results (%s)\n' "${OUT#$ROOT/}"
 printf '  %s\n' "${results[@]}"

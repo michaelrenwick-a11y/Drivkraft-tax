@@ -56,6 +56,7 @@ command -v uv >/dev/null || die "uv is required: curl -LsSf https://astral.sh/uv
 log "Creating .venv (Python $PYTHON_VERSION)"
 uv venv --quiet --allow-existing --python "$PYTHON_VERSION" "$ROOT/.venv"
 uv pip install --quiet --python "$ROOT/.venv/bin/python" \
-  -r "$VENDOR/otd-spec/examples/k1-1065-2025-synthetic/requirements-demo.txt"
+  -r "$VENDOR/otd-spec/examples/k1-1065-2025-synthetic/requirements-demo.txt" \
+  -r "$ROOT/server/requirements.txt"
 
 log "Done. Next: scripts/smoke.sh"

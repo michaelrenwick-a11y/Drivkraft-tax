@@ -19,11 +19,18 @@
 - OpenTax keeps its state in `./.state/returns` relative to its **cwd**, so every call runs with `cwd=data/cases/<id>/calc/` (one engine store per case, which is also what makes per-visitor demo sandboxes easy). Never run it from the repo root.
 - `run_demo.py` (PDF → OTD) refuses an existing `--out` directory, so each intake gets a fresh `docs/<doc_id>/artifacts/run-<n>/`.
 
+## As built (Phases 1.5–2)
+
+- **One registry, two adapters.** `server/tools/*` functions are registered with `@tool(kind, title, method, route)`, and `server/app.py` builds the MCP server and the FastAPI routes from that registry. The web app never talks MCP; it calls the same functions over `/api`.
+- **Intake** (`server/intake.py`) runs upstream `run_demo.py` as a subprocess into `docs/<doc>/artifacts/run-<n>` + `work/run-<n>`, and reports progress by watching `work/run-<n>/logs/<stage>.log` as each stage finishes. HTTP returns immediately and the web polls; MCP waits.
+- **K-1 files** (`server/k1doc.py`): `original.otd.yaml` (never modified) → `current.otd.yaml` (edits applied) → `bridge.json`; `approved.otd.yaml` is frozen at approval; `evidence.json` is upstream face evidence re-keyed by OTD path; `pages/p<n>.png` pages are rendered lazily with pypdfium2.
+- **SQLite as built:** `cases`, `documents` (status, progress, acknowledgements), `edits`, `inputs`, `events`. The later tables are added in their phases.
+
 ## Deployments
 
 | | Web | Server | Data |
 |---|---|---|---|
-| Local | `npm run dev` (:3000) | `uv run server` (:8787) | `data/` |
+| Local | `npm run dev` in `web/` (:3000; `/api/*` rewritten to :8787) | `uv run drivkraft-tax-server` (:8787: `/api` + `/mcp`), or `drivkraft-tax-mcp` over stdio | `data/` (override with `DRIVKRAFT_DATA`) |
 | Demo | Vercel | Fly.io container (opentax binary + vendored otd-spec baked in) | Fly volume; nightly reset from `demo/` seeds; per-visitor sandbox copies |
 
 ## Case folder

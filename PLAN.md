@@ -1,6 +1,6 @@
 # Drivkraft Tax — Practice Build Plan
 
-> v4 (2026-09-25). **A personal practice project and portfolio piece** built on the Open Tax Technology Alliance's open code: the OTD K-1 standard (`opentaxdocument/otd-spec`) and the OpenTax 1040 engine (`filedcom/opentax`). It is not a product. It's fully separate from the Drivkraft platform (no shared code, database or accounts) and borrows only Drivkraft's visual design as a starting point.
+> v5 (2026-09-25; Phases 0–2 done). **A personal practice project and portfolio piece** built on the Open Tax Technology Alliance's open code: the OTD K-1 standard (`opentaxdocument/otd-spec`) and the OpenTax 1040 engine (`filedcom/opentax`). It is not a product. It's fully separate from the Drivkraft platform (no shared code, database or accounts) and borrows only Drivkraft's visual design as a starting point.
 
 ## Charter
 
@@ -23,9 +23,9 @@
 
 | Layer | Choice | Why |
 |---|---|---|
-| Web | Next.js (App Router) + React + Tailwind v4 + Lucide + Recharts, Geist | Same toolkit as Drivkraft; strong base for polished UI |
-| UI primitives | Radix-based components (shadcn/ui pattern, owned in-repo) + Motion for animation | Accessible by default; full control of the look |
-| MCP server | Python, official `mcp` SDK (FastMCP); stdio for local use, streamable HTTP when hosted | One tool layer for Claude and the web app |
+| Web | Next.js 16 (App Router) + React 19 + Tailwind v4 + Lucide + Recharts (Phase 3), Geist; `/api` proxied to the server | Same toolkit as Drivkraft; strong base for polished UI |
+| UI primitives | Radix (dialog, tooltip, tabs) + cmdk, components owned in-repo under `web/src/components/ui` + Motion for animation | Accessible by default; full control of the look |
+| MCP server | Python, official `mcp` SDK 2.x (`MCPServer`, formerly FastMCP); stdio for local use, streamable HTTP at `/mcp` | One tool layer for Claude and the web app |
 | Worker | Python 3.11 + FastAPI in the same process/container as the MCP server | Runs the OTD tooling natively; `opentax` binary via subprocess |
 | Storage | SQLite + files under `data/` (local); SQLite on a persistent volume or Postgres (hosted, Q2) | Minimal setup |
 | AI | Anthropic API (chat, notes analysis) · Bizora (research) | Both optional |
@@ -36,20 +36,21 @@
 
 ```
 drivkraft-tax/
-├── PLAN.md
+├── PLAN.md  pyproject.toml  uv.lock
 ├── planning/  02-architecture · 03-otd-to-opentax-mapping · 04-mcp-server · 05-ux
 ├── reference/UPSTREAM.md
 ├── vendor/                # gitignored: otd-spec checkout, opentax binary
-├── server/                # Python: MCP server + FastAPI worker (one package)
-│   ├── tools/             # source_docs · k1 · engine · research · notes · output · efile
+├── server/                # Python: MCP server + FastAPI (one package)
+│   ├── app.py             # both adapters over the tool registry
+│   ├── tools/             # cases · k1 · returns  (later: research · notes · output · efile)
 │   ├── bridge/            # OTD → OpenTax mapping + ledger
-│   ├── store.py  engine.py  demo.py
+│   ├── store.py  k1doc.py  intake.py  samples.py  demo.py  engine.py  errors.py
 │   └── tests/
-├── web/                   # Next.js app (MCP client + UI)
-├── demo/                  # seed cases, cached research answers, scripted tour
-├── data/                  # gitignored
-├── docs/                  # README assets, architecture diagram, video script
-└── scripts/  bootstrap.sh · dev.sh · seed-demo.sh
+├── web/src/               # Next.js app: app/ routes, components/{shell,ui,cases,review}, lib/
+├── demo/                  # (Phase 10) seed cases, cached research answers, scripted tour
+├── data/                  # gitignored: SQLite + cases/<id>/docs/<doc>/…
+├── docs/                  # (Phase 10) README assets, architecture diagram, video script
+└── scripts/  bootstrap.sh · smoke.sh
 ```
 
 ---
@@ -91,13 +92,18 @@ Each phase ends with something runnable *and* meets its UX criteria from `planni
 - `approve_k1` requires `status: ok`. `calculation_incomplete` doesn't block approval, but the reviewer has to acknowledge each such flag.
 - *Result:* Web: `/cases` (list + New case), `/cases/[id]` (K-1 cards, sample picker, live named extraction stages streamed from upstream's per-stage logs), `/cases/[id]/k1/[doc]` (review: PDF page with a per-box evidence overlay | Boxes / Exceptions / Ledger tabs | detail panel with the evidence crop, bridge disposition, flags and fix hints). Keyboard: `j`/`k` move, `n` next exception, `e` edit, `a` acknowledge, `1`–`3` tabs, `⌘↵` approve. Source peek on every figure shows the cropped PDF region; a code that only appears on a statement is labeled that way (evidence `match: exact | entry | box`) rather than pretending to be the face value. Edits keep the original, require a reason, re-bridge, and offer Undo. ⌘K lists cases and New case. The web proxies `/api` to the server (`next.config.ts` rewrites). PDF intake takes about 10 s and accepts only the bundled synthetic PDF (upstream checks its hash). Checked: a keyboard-only review of the Copperleaf K-1 (10 acknowledgements, then approve, 2026-09-25), dark mode, and eslint/tsc clean. **Not yet checked:** 375 px (the browser resize didn't apply) and Lighthouse/axe on the new routes.
 
-### Phase 3 — Return calculation *(medium)*
+### Phase 3 — Return calculation *(medium)* · **Status: next**
 - Tools: `set_return_inputs`, `calculate_return`, `get_return_lines`, `run_scenario`, `explain_line` (leave-one-out attribution per K-1).
 - UI: return view with line-by-line attribution, a scenario side-by-side comparison, and every number clickable back to its source.
 - Check: reproduce benchmark `82-single-w2-k1-1099r-1099int-1099div` through OTD. This already passes as a test (`test_bench_82_fixture_reproduces_the_benchmark`); Phase 3 runs it through `calculate_return`. (`93-mfj-w2-k1` has no K-1 amounts.)
 - First, find out why a return with only `start` + K-1 shows `line18_total_tax_before_credits: 0` (`reference/UPSTREAM.md`). Scenarios are unreliable until that's explained.
 - Route Box 13 around the engine gap: the bridge emits a list of forms, not one item. Codes A–G go to `schedule_a` (the way upstream benchmarks do it) and H goes to Form 4952 if OpenTax has that node. `mapping.yaml` gains a `node:` key per rule; the ledger and reconciliation stay per field.
 - `explain_line` attributes per K-1 *and* per ledger entry, so a line can be traced back to "Box 11 A of Greenfield".
+- Carried from Phases 1.5–2:
+  - `calculate_return` already exists (`server/tools/returns.py`): it runs approved K-1s plus the case's `inputs` rows with a fresh engine store per run, and it flags the K-1-only zero-tax case as a caveat. Phase 3 extends it rather than replacing it. `set_return_inputs` writes to the existing `inputs` table.
+  - Case view: replace the disabled "Calculate return · Phase 3" button with the real action. The return view links each K-1 contribution to the review screen's `k1://{doc}/box/{path}` sources.
+  - The Rivera household test case has an approved Copperleaf K-1 whose Boxes 13, 15, 18 A, 21 and others are `calculation_incomplete`. That makes it the natural first case for the Box 13 routing work.
+  - Open UX checks from Phase 2: 375 px layout and Lighthouse/axe on `/cases/[id]` and the review route.
 
 ### Phase 4 — Chat (web client over MCP) *(medium)*
 - Web chat panel uses the Anthropic API with our MCP server's tools, so it's the same toolset Claude Desktop sees.
@@ -141,9 +147,9 @@ Each phase ends with something runnable *and* meets its UX criteria from `planni
 
 | | Phases | Demo |
 |---|---|---|
-| M0 | 0 | Upstream tools run; app shell looks finished even while empty |
-| M1 | 1, 1.5 | Claude Desktop answers questions about the proof K-1 via our MCP server |
-| M2 | 2–3 | Synthetic K-1 PDF → approved → 1040 with attribution, in the browser |
+| M0 ✓ | 0 | Upstream tools run; app shell looks finished even while empty |
+| M1 ✓ | 1, 1.5 | Claude Desktop answers questions about the proof K-1 via our MCP server (tested over a stdio client; Desktop walk-through pending) |
+| M2 | 2 ✓, 3 | Synthetic K-1 PDF → approved → 1040 with attribution, in the browser (PDF → approved works) |
 | M3 | 4–7 | Chat blends K-1, notes and research with citations; Excel round-trip; review packet |
 | M4 | 8–9 | E-file dry run + operator page |
 | M5 | 10 | Public demo link + repo + video + case study |
@@ -160,5 +166,5 @@ Each phase ends with something runnable *and* meets its UX criteria from `planni
 
 ## Nice-to-haves
 - Upstream issues for the OpenTax K-1 gaps in `planning/03` (list now concrete: unrouted 13/18/19, silent field stripping, 14A = 0, Box 11 per-code, SSTB/UBIA).
-- More synthetic K-1s to stress the bridge.
+- More synthetic K-1s to stress the bridge. Note that the upstream PDF runner only accepts its own synthetic PDF (source hash check), so new PDF samples need a different extraction entry point.
 - K-3 once upstream implements it.

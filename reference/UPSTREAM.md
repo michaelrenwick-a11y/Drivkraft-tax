@@ -5,7 +5,7 @@
 | OTD spec | https://github.com/opentaxdocument/otd-spec | `be6452a` (2026-09-21) | CC BY 4.0 | 2026-09-25 |
 | OpenTax engine | https://github.com/filedcom/opentax | `c4c7d72` (2026-09-24) = release **v2.0.4** | AGPL v3 / commercial | 2026-09-25 |
 
-Fetch with `scripts/bootstrap.sh` (needs git, curl, [uv](https://docs.astral.sh/uv/)). It clones both pins into `vendor/`, downloads the `opentax-<os>-<arch>` release binary for v2.0.4 into `vendor/bin/opentax`, and creates `.venv` (Python 3.11) with the OTD demo requirements (`ruamel.yaml`, `simplejson`, `PyYAML`, `pdfplumber`, `pypdf`) plus `server/requirements.txt` (`pytest`). Then run `scripts/smoke.sh`.
+Fetch with `scripts/bootstrap.sh` (needs git, curl, [uv](https://docs.astral.sh/uv/)). It clones both pins into `vendor/`, downloads the `opentax-<os>-<arch>` release binary for v2.0.4 into `vendor/bin/opentax`, and runs `uv sync` to create `.venv` (Python 3.11) from `pyproject.toml`/`uv.lock`. That holds the OTD pins (`ruamel.yaml`, `simplejson`, `PyYAML`, `pdfplumber`, `pypdf`) and the server's deps (`mcp` 2.x, `fastapi`, `uvicorn`, `pypdfium2`; `pytest` and `httpx` in the dev group). Keep the OTD pins in sync with `otd-spec`'s requirements files when the pin moves. Then run `scripts/smoke.sh`.
 
 Key upstream paths:
 - OTD taxonomy: `taxonomies/irs-k1-1065-2025.yaml`

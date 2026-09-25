@@ -25,7 +25,8 @@
       "code": "passive_inferred",
       "message": "OpenTax treats Box 1 as passive (Form 8960 NIIT) because Box 14 A is empty or zero; confirm material participation",
       "path": "part_iii.box_1",
-      "severity": "info"
+      "severity": "info",
+      "fix_hint": "Confirm the partner's material participation; OpenTax assumes passive when 14 A is empty or zero."
     }
   ],
   "summary": {

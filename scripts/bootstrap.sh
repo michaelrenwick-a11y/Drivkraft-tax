@@ -53,10 +53,7 @@ log "$("$OPENTAX_BIN" version)"
 
 # Python venv via uv (fetches Python $PYTHON_VERSION if the system lacks it).
 command -v uv >/dev/null || die "uv is required: curl -LsSf https://astral.sh/uv/install.sh | sh"
-log "Creating .venv (Python $PYTHON_VERSION)"
-uv venv --quiet --allow-existing --python "$PYTHON_VERSION" "$ROOT/.venv"
-uv pip install --quiet --python "$ROOT/.venv/bin/python" \
-  -r "$VENDOR/otd-spec/examples/k1-1065-2025-synthetic/requirements-demo.txt" \
-  -r "$ROOT/server/requirements.txt"
+log "Syncing .venv (Python $PYTHON_VERSION) from pyproject.toml / uv.lock"
+(cd "$ROOT" && uv sync --quiet --python "$PYTHON_VERSION")
 
 log "Done. Next: scripts/smoke.sh"

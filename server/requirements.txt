@@ -1,3 +1,0 @@
-# Server deps on top of the OTD demo requirements (installed by scripts/bootstrap.sh).
-PyYAML>=6
-pytest>=8

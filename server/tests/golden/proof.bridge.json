@@ -42,67 +42,78 @@
       "code": "calculation_incomplete",
       "message": "Box 11 F (Section 743(b) positive income adjustments) isn't in the calculation: §743(b) adjustment belongs to the item it relates to",
       "path": "part_iii.box_11.F",
-      "severity": "warning"
+      "severity": "warning",
+      "fix_hint": "Acknowledge it before approval: this amount won't reach the 1040 until a later phase routes it."
     },
     {
       "code": "calculation_incomplete",
       "message": "Box 13 A (Cash contributions (60%)) isn't in the calculation: Engine accepts box13_deductions but never routes it (v2.0.4); Schedule A / Form 4952 routing is a later phase",
       "path": "part_iii.box_13.A",
-      "severity": "warning"
+      "severity": "warning",
+      "fix_hint": "Acknowledge it before approval: this amount won't reach the 1040 until a later phase routes it."
     },
     {
       "code": "calculation_incomplete",
       "message": "Box 13 H (Investment interest expense) isn't in the calculation: Engine accepts box13_deductions but never routes it (v2.0.4); Schedule A / Form 4952 routing is a later phase",
       "path": "part_iii.box_13.H",
-      "severity": "warning"
+      "severity": "warning",
+      "fix_hint": "Acknowledge it before approval: this amount won't reach the 1040 until a later phase routes it."
     },
     {
       "code": "calculation_incomplete",
       "message": "Box 13 K (Excess business interest expense (EBIE)) isn't in the calculation: Engine accepts box13_deductions but never routes it (v2.0.4); Schedule A / Form 4952 routing is a later phase",
       "path": "part_iii.box_13.K",
-      "severity": "warning"
+      "severity": "warning",
+      "fix_hint": "Acknowledge it before approval: this amount won't reach the 1040 until a later phase routes it."
     },
     {
       "code": "calculation_incomplete",
       "message": "Box 15 M (Credit for increasing research activities) isn't in the calculation: No credit inputs on k1_partnership",
       "path": "part_iii.box_15.M",
-      "severity": "warning"
+      "severity": "warning",
+      "fix_hint": "Acknowledge it before approval: this amount won't reach the 1040 until a later phase routes it."
     },
     {
       "code": "calculation_incomplete",
       "message": "Box 15 AW (Carbon oxide sequestration credit) isn't in the calculation: No credit inputs on k1_partnership",
       "path": "part_iii.box_15.AW",
-      "severity": "warning"
+      "severity": "warning",
+      "fix_hint": "Acknowledge it before approval: this amount won't reach the 1040 until a later phase routes it."
     },
     {
       "code": "calculation_incomplete",
       "message": "Box 18 A (Tax-exempt interest income) isn't in the calculation: Tax-exempt interest → 1040 line 2a (and Social Security taxability); engine ignores box18",
       "path": "part_iii.box_18.A",
-      "severity": "warning"
+      "severity": "warning",
+      "fix_hint": "Acknowledge it before approval: this amount won't reach the 1040 until a later phase routes it."
     },
     {
       "code": "statement_review",
       "message": "Box 20 ZZ carries a statement (form_926_transfer_to_foreign_corp) with no amount; review it",
       "path": "part_iii.box_20.ZZ",
-      "severity": "info"
+      "severity": "info",
+      "fix_hint": "Read the attached statement on the PDF; it carries information but no amount."
     },
     {
       "code": "calculation_incomplete",
       "message": "Box 21 (Foreign taxes paid or accrued) isn't in the calculation: Engine routes foreign tax to Form 1116 only with K-3 income + category, which isn't implemented",
       "path": "part_iii.box_21",
-      "severity": "warning"
+      "severity": "warning",
+      "fix_hint": "Acknowledge it before approval: this amount won't reach the 1040 until a later phase routes it."
     },
     {
       "code": "engine_overrides_zero",
       "message": "Box 14 A is 0, but OpenTax treats a zero as missing and uses Box 4a (75,000.00) as SE earnings",
       "path": "part_iii.box_14.A",
-      "severity": "warning"
+      "severity": "warning",
+      "fix_hint": "OpenTax will compute SE tax on Box 4a anyway. Note it in the file; an upstream issue is open."
     },
     {
       "code": "passive_inferred",
       "message": "OpenTax treats Box 1 as passive (Form 8960 NIIT) because Box 14 A is empty or zero; confirm material participation",
       "path": "part_iii.box_1",
-      "severity": "info"
+      "severity": "info",
+      "fix_hint": "Confirm the partner's material participation; OpenTax assumes passive when 14 A is empty or zero."
     }
   ],
   "summary": {

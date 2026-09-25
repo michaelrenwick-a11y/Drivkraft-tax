@@ -38,85 +38,99 @@
       "code": "unverified_value",
       "message": "Source value unverified; omitted from the calculation",
       "path": "part_i.item_c",
-      "severity": "warning"
+      "severity": "warning",
+      "fix_hint": "Compare the value with its PDF highlight. Editing it (even to the same value) marks it verified."
     },
     {
       "code": "unverified_value",
       "message": "Source value unverified; omitted from the calculation",
       "path": "part_ii.item_h2",
-      "severity": "warning"
+      "severity": "warning",
+      "fix_hint": "Compare the value with its PDF highlight. Editing it (even to the same value) marks it verified."
     },
     {
       "code": "unverified_value",
       "message": "Source value unverified; omitted from the calculation",
       "path": "part_ii.item_l",
-      "severity": "warning"
+      "severity": "warning",
+      "fix_hint": "Compare the value with its PDF highlight. Editing it (even to the same value) marks it verified."
     },
     {
       "code": "unverified_value",
       "message": "Source value unverified; omitted from the calculation",
       "path": "part_iii.box_4c",
-      "severity": "warning"
+      "severity": "warning",
+      "fix_hint": "Compare the value with its PDF highlight. Editing it (even to the same value) marks it verified."
     },
     {
       "code": "calculation_incomplete",
       "message": "Box 11 C (Section 1256 contracts and straddles) isn't in the calculation: Needs its own form or character (capital, §1256, exclusion); summing into line 8z would misstate tax",
       "path": "part_iii.box_11.C",
-      "severity": "warning"
+      "severity": "warning",
+      "fix_hint": "Acknowledge it before approval: this amount won't reach the 1040 until a later phase routes it."
     },
     {
       "code": "calculation_incomplete",
       "message": "Box 11 S (Non-portfolio capital gain (loss)) isn't in the calculation: Needs its own form or character (capital, §1256, exclusion); summing into line 8z would misstate tax",
       "path": "part_iii.box_11.S",
-      "severity": "warning"
+      "severity": "warning",
+      "fix_hint": "Acknowledge it before approval: this amount won't reach the 1040 until a later phase routes it."
     },
     {
       "code": "calculation_incomplete",
       "message": "Box 13 A (Cash contributions (60%)) isn't in the calculation: Engine accepts box13_deductions but never routes it (v2.0.4); Schedule A / Form 4952 routing is a later phase",
       "path": "part_iii.box_13.A",
-      "severity": "warning"
+      "severity": "warning",
+      "fix_hint": "Acknowledge it before approval: this amount won't reach the 1040 until a later phase routes it."
     },
     {
       "code": "calculation_incomplete",
       "message": "Box 13 B (Cash contributions (30%)) isn't in the calculation: Engine accepts box13_deductions but never routes it (v2.0.4); Schedule A / Form 4952 routing is a later phase",
       "path": "part_iii.box_13.B",
-      "severity": "warning"
+      "severity": "warning",
+      "fix_hint": "Acknowledge it before approval: this amount won't reach the 1040 until a later phase routes it."
     },
     {
       "code": "calculation_incomplete",
       "message": "Box 13 AE (Deductions — portfolio income) isn't in the calculation: Engine accepts box13_deductions but never routes it (v2.0.4); Schedule A / Form 4952 routing is a later phase",
       "path": "part_iii.box_13.AE",
-      "severity": "warning"
+      "severity": "warning",
+      "fix_hint": "Acknowledge it before approval: this amount won't reach the 1040 until a later phase routes it."
     },
     {
       "code": "calculation_incomplete",
       "message": "Box 13 H (Investment interest expense) isn't in the calculation: Engine accepts box13_deductions but never routes it (v2.0.4); Schedule A / Form 4952 routing is a later phase",
       "path": "part_iii.box_13.H",
-      "severity": "warning"
+      "severity": "warning",
+      "fix_hint": "Acknowledge it before approval: this amount won't reach the 1040 until a later phase routes it."
     },
     {
       "code": "calculation_incomplete",
       "message": "Box 13 R (Pensions and IRAs) isn't in the calculation: Engine accepts box13_deductions but never routes it (v2.0.4); Schedule A / Form 4952 routing is a later phase",
       "path": "part_iii.box_13.R",
-      "severity": "warning"
+      "severity": "warning",
+      "fix_hint": "Acknowledge it before approval: this amount won't reach the 1040 until a later phase routes it."
     },
     {
       "code": "calculation_incomplete",
       "message": "Box 15 A (Zero-emission nuclear power production credit) isn't in the calculation: No credit inputs on k1_partnership",
       "path": "part_iii.box_15.A",
-      "severity": "warning"
+      "severity": "warning",
+      "fix_hint": "Acknowledge it before approval: this amount won't reach the 1040 until a later phase routes it."
     },
     {
       "code": "calculation_incomplete",
       "message": "Box 18 A (Tax-exempt interest income) isn't in the calculation: Tax-exempt interest → 1040 line 2a (and Social Security taxability); engine ignores box18",
       "path": "part_iii.box_18.A",
-      "severity": "warning"
+      "severity": "warning",
+      "fix_hint": "Acknowledge it before approval: this amount won't reach the 1040 until a later phase routes it."
     },
     {
       "code": "calculation_incomplete",
       "message": "Box 21 (Foreign taxes paid or accrued) isn't in the calculation: Engine routes foreign tax to Form 1116 only with K-3 income + category, which isn't implemented",
       "path": "part_iii.box_21",
-      "severity": "warning"
+      "severity": "warning",
+      "fix_hint": "Acknowledge it before approval: this amount won't reach the 1040 until a later phase routes it."
     }
   ],
   "summary": {

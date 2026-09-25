@@ -1,0 +1,34 @@
+"""Tool registry. Each capability is a plain function registered once here;
+server/app.py exposes every entry as an MCP tool and as a FastAPI route.
+
+Kinds (planning/04): R read-only · W writes to the case · $ costs money · P proposal.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Callable
+
+REGISTRY: dict[str, "ToolSpec"] = {}
+
+
+@dataclass(frozen=True)
+class ToolSpec:
+    name: str
+    fn: Callable
+    kind: str
+    title: str
+    # HTTP route: method + path template using the function's argument names.
+    method: str
+    route: str
+
+
+def tool(kind: str, title: str, method: str, route: str):
+    def register(fn: Callable) -> Callable:
+        REGISTRY[fn.__name__] = ToolSpec(fn.__name__, fn, kind, title, method, route)
+        return fn
+    return register
+
+
+def load_all() -> dict[str, ToolSpec]:
+    from . import cases, k1, returns  # noqa: F401  (registers on import)
+    return REGISTRY

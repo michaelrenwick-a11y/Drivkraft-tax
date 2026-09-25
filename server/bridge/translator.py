@@ -21,6 +21,7 @@ from typing import Any
 import yaml
 
 from .. import engine
+from ..errors import FIX_HINTS
 from ..paths import OTD_TAXONOMY
 from . import otd
 
@@ -94,7 +95,9 @@ class Issue:
     severity: str = "error"   # error (blocks) | warning | info
 
     def to_dict(self) -> dict:
-        return {k: v for k, v in asdict(self).items() if v is not None}
+        d = {k: v for k, v in asdict(self).items() if v is not None}
+        d["fix_hint"] = FIX_HINTS.get(self.code, "")
+        return d
 
 
 @dataclass
@@ -188,8 +191,8 @@ def bridge_k1(otd_path: Path | str) -> BridgeResult:
     _check_engine_constraints(result, walker)
     _reconcile(result, walker, body)
     _raise_flags(result, walker)
-    flagged = {f"body.{f.path}" for f in result.flags}
-    for p in v.unverified_paths:
+    flagged = {f.path for f in result.flags}
+    for p in (p.removeprefix("body.") for p in v.unverified_paths):
         if p not in flagged:
             result.flags.append(Issue("human_review", "Validator marked this for human review", p, "warning"))
 

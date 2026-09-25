@@ -14,6 +14,23 @@ No logic is duplicated: both adapters call the same function.
 | Local web | streamable HTTP on `127.0.0.1:8787/mcp` | none |
 | Hosted demo | streamable HTTP at `https://<host>/mcp` | invite bearer token; per-token rate limit; demo mode forced |
 
+## Connecting a client
+
+Claude Desktop (`~/Library/Application Support/Claude/claude_desktop_config.json`):
+
+```json
+{ "mcpServers": { "drivkraft-tax": {
+    "command": "/Users/<you>/drivkraft-tax/.venv/bin/drivkraft-tax-mcp" } } }
+```
+
+Claude Code: `claude mcp add drivkraft-tax -- ~/drivkraft-tax/.venv/bin/drivkraft-tax-mcp`, or point it at the HTTP server with `claude mcp add --transport http drivkraft-tax http://127.0.0.1:8787/mcp`.
+
+Implementation notes (Phase 1.5):
+- SDK is `mcp` 2.x: `from mcp.server.mcpserver import MCPServer` (FastMCP's new name). A `ToolError` reaches the model as `is_error` with the text `Error executing tool <name>: {code, message, fix_hint}` (JSON).
+- Tools are registered once in `server/tools/` (`@tool(kind, title, method, route)`), and `server/app.py` builds both adapters from that registry. Annotations follow the kind: R means `readOnlyHint`.
+- HTTP `intake_k1` returns immediately (`wait=false`) and the web polls `read_k1` for the stages; MCP waits, about 10 s for the PDF.
+- Two tools were added beyond the original catalog: `list_k1_samples` (so a model knows what intake accepts) and `acknowledge_flag` (so acknowledgements persist between sessions instead of being passed to `approve_k1`).
+
 ## Tool catalog
 
 Legend: **R** read-only · **W** writes to the case · **$** costs money · **P** creates a *proposal* (a human must accept it).

@@ -72,7 +72,7 @@ Each phase ends with something runnable *and* meets its UX criteria from `planni
 - Build a K-1 fixture with real amounts for the Phase 3 benchmark check. The `93-mfj-w2-k1` K-1 has no amounts, so it only proves the plumbing; check `95-single-w2-k1-…` first.
 - *Result:* `server/bridge/` (mapping.yaml, translator + ledger, validator shim) and `server/engine.py`; 17 tests, added to `scripts/smoke.sh` (5/5 pass). Try it with `.venv/bin/python -m server.bridge <file.otd.yaml> [--ledger]`. Proof and synthetic K-1s bridge and fully reconcile, and the hostile fixture is refused. The OTD twin of benchmark 82's K-1 reproduces that benchmark within $5. Open items resolved: the CLI takes one flat item per `form add` and **silently strips unknown fields**, so the bridge allowlists against the live engine schema. Bigger finding: Box 4c, 13, 18 and 19 (and Box 21 without K-3) are accepted but **never used** in the calculation, and 14A = 0 is treated as missing. See `planning/03`.
 
-### Phase 1.5 — MCP server skeleton *(medium)* · **Status: next**
+### Phase 1.5 — MCP server skeleton *(medium)* · **Status: done 2026-09-25**
 - FastMCP server with the first tools: `list_cases`, `list_documents`, `read_k1`, `get_k1_box`, `validate_otd`, `bridge_k1`, `calculate_return`. Resources: `case://{id}`, `k1://{id}`, `k1://{id}/box/{box}`.
 - Runs locally via stdio; add it to Claude Desktop/Code and walk the proof K-1 in conversation.
 - Carried from Phase 1:
@@ -82,6 +82,7 @@ Each phase ends with something runnable *and* meets its UX criteria from `planni
   - Flags and ledger paths (e.g. `part_iii.box_13.H`) are the `k1_box` refs in `sources[]`.
 - The web app talks to the same functions over HTTP (FastAPI routes and MCP tools share one implementation).
 - Full tool catalog: `planning/04-mcp-server.md`.
+- *Result:* `server/app.py` exposes one tool registry (`server/tools/`) twice: MCP (stdio via `uv run drivkraft-tax-mcp`, streamable HTTP at `127.0.0.1:8787/mcp`) and FastAPI (`/api/...`, same functions). The SDK is **mcp 2.x, where FastMCP is now `MCPServer`**. 15 tools (the Phase 1.5 set plus Phase 2's, below), 4 resources and the `review_k1` prompt. Every issue carries a `fix_hint`, and every response carries `sources[]`. Calls are logged to `events`. There are two read-only reference cases: `ref-k1s` (the proof, synthetic and bench-82 K-1s, approved) and `ref-bench-82` (benchmark 82's W-2/1099 inputs plus the OTD twin; `calculate_return` matches the benchmark within $5). Deps moved into `pyproject.toml` + `uv.lock`, and `bootstrap.sh` runs `uv sync`. At the data level, "what isn't in the calculation?" is answered by `bridge_k1` alone (`not_in_calculation` + `calculation_incomplete` flags, tested). Checked over a real stdio client; the Claude Desktop walk-through is left for you (config in `planning/04`).
 
 ### Phase 2 — Cases + K-1 intake and review *(large)*
 - Tools: `create_case`, `intake_k1` (PDF → k1-otd pipeline → OTD + artifacts), `edit_k1_value` (original kept, reason required), `approve_k1`.

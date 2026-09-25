@@ -68,8 +68,8 @@ print(f"return {rid}")
 sys.exit(1 if bad else 0)
 PYEOF
 
-# 5. Bridge tests (OTD → OpenTax goldens, refusals, benchmark 82 through OTD)
-check bridge-tests "$PY" -m pytest -q "$ROOT/server/tests"
+# 5. Server tests (bridge goldens and refusals, benchmark 82, tools over MCP and HTTP, PDF intake)
+check server-tests "$PY" -m pytest -q "$ROOT/server/tests"
 
 printf '\nSmoke results (%s)\n' "${OUT#$ROOT/}"
 printf '  %s\n' "${results[@]}"

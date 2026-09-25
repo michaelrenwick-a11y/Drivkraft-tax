@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { NAV, navItemFor } from "@/lib/nav";
+import { ResetData } from "./reset-data";
 
 export function Brand() {
   return (
@@ -52,9 +53,12 @@ export function SidebarNav() {
 
 export function SidebarFooter() {
   return (
-    <div className="rounded-lg border border-sidebar-border p-3 text-xs leading-5 text-sidebar-fg">
-      <p className="font-medium text-sidebar-fg-active">Practice build</p>
-      <p>Synthetic data only. Not tax advice and never filed with the IRS.</p>
+    <div className="flex flex-col gap-2">
+      <div className="rounded-lg border border-sidebar-border p-3 text-xs leading-5 text-sidebar-fg">
+        <p className="font-medium text-sidebar-fg-active">Practice build</p>
+        <p>Synthetic data only. Not tax advice and never filed with the IRS.</p>
+      </div>
+      <ResetData />
     </div>
   );
 }

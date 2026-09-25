@@ -187,6 +187,25 @@ def build_http():
     def health():
         return {"ok": True, "tools": len(REGISTRY)}
 
+    @app.post("/api/admin/reset")
+    async def reset(request: Request):
+        """Delete every case and re-seed the reference cases. HTTP only: not an MCP tool,
+        so no model can wipe the data. Needs {"confirm": "reset"}."""
+        try:
+            body = json.loads(await request.body() or b"{}")
+        except json.JSONDecodeError:
+            body = {}
+        if not isinstance(body, dict) or body.get("confirm") != "reset":
+            raise ToolFailure("confirm_required", "Reset needs confirmation", 'Send {"confirm": "reset"}.', status=400)
+        extracting = [d["id"] for c in store.list_cases() for d in store.list_documents(c["id"])
+                      if d["status"] == "extracting"]
+        if extracting:
+            raise ToolFailure("busy", "A K-1 is still extracting", "Wait for extraction to finish, then reset.",
+                              status=409)
+        await run_in_threadpool(store.reset)
+        await run_in_threadpool(demo.seed)
+        return {"ok": True, "cases": [c["id"] for c in store.list_cases()]}
+
     @app.get("/api/tools")
     def tools():
         return {"tools": [{"name": s.name, "title": s.title, "kind": s.kind, "method": s.method,

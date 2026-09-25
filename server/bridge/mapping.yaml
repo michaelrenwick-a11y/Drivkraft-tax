@@ -13,6 +13,11 @@
 #   unsupported    has a 1040 effect OpenTax can't take → sets calculation_incomplete
 #   informational  no 1040 calculation effect (identifiers, checkboxes, basis-only items)
 #
+# Optional keys: `node` (engine form, default meta.opentax_node) and `flag` (a
+# reviewer flag raised when the amount is non-zero). `sign: deduction` sends a
+# negative amount as its absolute value (K-1s print deductions in parentheses)
+# and flags it; the ledger keeps the K-1's own sign.
+#
 # A field OpenTax *accepts but never routes* is not sent; its disposition says
 # what the value really does (e.g. box13_deductions is a no-op in v2.0.4).
 
@@ -47,7 +52,10 @@ part_iii:
   box_7: {disposition: mapped, field: box7_royalties}
   box_8: {disposition: mapped, field: box8_net_st_cap_gain}
   box_9a: {disposition: mapped, field: box9a_net_lt_cap_gain}
-  box_9b: {disposition: mapped, field: box9b_collectibles_gain, note: "Not the legacy box9b_unrecaptured_1250"}
+  # 9b is a subset of 9a, so the gain is still taxed (at ≤ 20% instead of 28%). Sending it breaks
+  # OpenTax 2.0.4: rate_28_gain arrives at income_tax_calculation twice, the node fails validation
+  # and regular income tax comes out 0 (reference/UPSTREAM.md).
+  box_9b: {disposition: unsupported, note: "Sending box9b_collectibles_gain makes OpenTax 2.0.4 drop regular income tax to 0; the gain stays in 9a, taxed at ≤ 20% instead of 28%"}
   box_9c: {disposition: mapped, field: box9c_unrecaptured_1250}
   box_10: {disposition: mapped, field: box10_net_1231}
 
@@ -64,8 +72,21 @@ part_iii:
 
   box_12: {disposition: mapped, field: box12_section_179}
 
+  # The engine accepts box13_deductions but never routes it (v2.0.4), so the itemized codes go
+  # straight to Schedule A, as upstream's benchmarks do. `node:` names the engine form.
   box_13:
-    default: {disposition: unsupported, note: "Engine accepts box13_deductions but never routes it (v2.0.4); Schedule A / Form 4952 routing is a later phase"}
+    default: {disposition: unsupported, note: "No OpenTax input takes this deduction from a K-1"}
+    codes:
+      A: {disposition: collapsed, node: schedule_a, sign: deduction, field: line_11_cash_contributions, note: "→ Schedule A line 11"}
+      B: {disposition: collapsed, node: schedule_a, sign: deduction, field: line_11_cash_contributions, flag: agi_limit_simplified, note: "→ Schedule A line 11; the 30% AGI limit isn't applied separately"}
+      C: {disposition: collapsed, node: schedule_a, sign: deduction, field: line_12_noncash_contributions, note: "→ Schedule A line 12"}
+      D: {disposition: collapsed, node: schedule_a, sign: deduction, field: line_12_noncash_contributions, flag: agi_limit_simplified, note: "→ Schedule A line 12; the 30% AGI limit isn't applied separately"}
+      E: {disposition: collapsed, node: schedule_a, sign: deduction, field: line_12_noncash_contributions, flag: agi_limit_simplified, note: "→ Schedule A line 12; the 30% AGI limit isn't applied separately"}
+      F: {disposition: collapsed, node: schedule_a, sign: deduction, field: line_12_noncash_contributions, flag: agi_limit_simplified, note: "→ Schedule A line 12; the 20% AGI limit isn't applied separately"}
+      G: {disposition: collapsed, node: schedule_a, sign: deduction, field: line_11_cash_contributions, note: "→ Schedule A line 11"}
+      H: {disposition: mapped, node: schedule_a, sign: deduction, field: line_9_investment_interest, flag: investment_interest_unlimited, note: "→ Schedule A line 9; OpenTax has no Form 4952 input, so the net-investment-income limit isn't applied"}
+      L: {disposition: informational, note: "Portfolio deductions (§67(g)): not deductible for 2018–2025"}
+      AE: {disposition: informational, note: "Portfolio deductions (§67(g)): not deductible for 2018–2025"}
 
   box_14:
     codes:

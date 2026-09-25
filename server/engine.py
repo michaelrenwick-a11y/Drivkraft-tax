@@ -40,6 +40,14 @@ def _run(args: list[str], cwd: Path) -> Any:
     return json.loads(r.stdout) if r.stdout.strip() else None
 
 
+@lru_cache(maxsize=None)
+def is_array_node(node_type: str) -> bool:
+    """Array nodes (w2, k1_partnership) take one entry per form; singletons (schedule_a)
+    count only one entry, so several contributions must be merged first."""
+    info = _run(["node", "inspect", "--node_type", node_type], Path.cwd())
+    return any(" array" in line for line in info["schema"][:1])
+
+
 @dataclass(frozen=True)
 class FieldSpec:
     name: str
@@ -49,12 +57,13 @@ class FieldSpec:
     enum: tuple[str, ...] = ()
 
 
-_FIELD_LINE = re.compile(r"^ {4}(\w+)\s{2,}(\w+)(.*)$")
+# Array nodes list item fields indented 4 spaces; singleton nodes (schedule_a) list them flush left.
+_FIELD_LINE = re.compile(r"^(?: {4})?(\w+)\s{2,}(\w+)(.*)$")
 
 
 @lru_cache(maxsize=None)
 def node_schema(node_type: str) -> dict[str, FieldSpec]:
-    """Per-item field specs for an array node, read from `opentax node inspect`.
+    """Field specs for a node (per item for an array node), read from `opentax node inspect`.
 
     Parsing the binary's own schema keeps the bridge's allowlist and ≥0 checks
     in lockstep with the pinned engine.
@@ -66,6 +75,8 @@ def node_schema(node_type: str) -> dict[str, FieldSpec]:
         if not m:
             continue
         name, typ, rest = m.groups()
+        if typ == "array":
+            continue
         enum = ()
         if typ == "enum":
             enum = tuple(v.strip() for v in rest.split("(optional)")[0].split("|"))
@@ -89,6 +100,12 @@ class Return:
     def add_form(self, node_type: str, data: dict) -> str:
         out = _run(["form", "add", "--returnId", self.id, "--node_type", node_type, json.dumps(data)], self.workdir)
         return out["id"]
+
+    def update_form(self, entry_id: str, data: dict) -> None:
+        _run(["form", "update", "--returnId", self.id, "--entryId", entry_id, json.dumps(data)], self.workdir)
+
+    def delete_form(self, entry_id: str) -> None:
+        _run(["form", "delete", "--returnId", self.id, "--entryId", entry_id], self.workdir)
 
     def get(self) -> dict:
         return _run(["return", "get", "--returnId", self.id], self.workdir)

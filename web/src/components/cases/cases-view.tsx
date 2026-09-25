@@ -2,12 +2,15 @@
 
 import { ArrowRight, Calculator, FileScan, FolderOpen, ListChecks, Lock, Plus, type LucideIcon } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { useUI } from "@/components/providers";
 import { Button } from "@/components/ui/button";
 import { CaseStatusPill } from "@/components/ui/doc-status";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/components/ui/toast";
 import { FILING_STATUS_LABELS, useApi, type Case } from "@/lib/api";
 import { relativeTime } from "@/lib/format";
 
@@ -17,9 +20,19 @@ const STEPS: { icon: LucideIcon; title: string; body: string }[] = [
   { icon: Calculator, title: "Calculate", body: "The 1040 builds from approved data. Click any line to see its sources." },
 ];
 
-export function CasesView() {
+export function CasesView({ justReset = false }: { justReset?: boolean }) {
   const { setNewCaseOpen } = useUI();
   const { data, error, loading, reload } = useApi<{ cases: Case[] }>("/cases");
+  const router = useRouter();
+  const toast = useToast();
+
+  // Arriving from "Reset data": confirm it once, then drop ?reset=1.
+  useEffect(() => {
+    if (!justReset) return;
+    toast({ tone: "success", title: "Data reset", body: "Your cases are gone; the reference cases were rebuilt." });
+    void reload();   // already on /cases: the list on screen predates the reset
+    router.replace("/cases", { scroll: false });
+  }, [justReset, toast, router, reload]);
 
   if (error) return <ErrorState error={error} onRetry={reload} />;
 

@@ -54,10 +54,11 @@ def test_what_is_not_in_the_calculation_comes_from_bridge_k1_alone():
     """05-ux Phase 1.5 criterion, checked at the data level."""
     b = call("bridge_k1", "ref-synthetic")
     missing = {e["label"]: e["value"] for e in b["not_in_calculation"]}
-    assert {"Box 13 A", "Box 15 A", "Box 18 A", "Box 21"} <= set(missing)
-    assert missing["Box 13 A"] == 29400
+    assert {"Box 9b", "Box 13 R", "Box 15 A", "Box 18 A", "Box 21"} <= set(missing)
+    assert missing["Box 9b"] == 394600
+    assert "Box 13 A" not in missing          # Phase 3: routed to Schedule A
     assert all(f["fix_hint"] for f in b["flags"])
-    assert {s["ref"] for s in b["sources"]} >= {"k1://ref-synthetic/box/part_iii.box_13.A"}
+    assert {s["ref"] for s in b["sources"]} >= {"k1://ref-synthetic/box/part_iii.box_9b"}
 
 
 @pytest.mark.parametrize("box,code,path", [
@@ -87,9 +88,11 @@ def test_bad_box_is_a_structured_error():
 def test_calculate_reference_bench_82_matches_the_benchmark():
     out = call("calculate_return", "ref-bench-82")
     correct = json.loads((OPENTAX_BENCH / "82-single-w2-k1-1099r-1099int-1099div" / "correct.json").read_text())["correct"]
+    lines = {l["key"]: l["value"] for l in out["lines"]}
     for k in ("line24_total_tax", "line35a_refund", "line37_amount_owed"):
-        assert abs((out["summary"].get(k) or 0) - correct[k]) <= 5, k
+        assert abs((lines.get(k) or 0) - correct[k]) <= 5, k
     assert [i["doc_id"] for i in out["included"]] == ["ref-bench-82-oak"]
+    assert not out["engine_failures"] and not out["caveats"]
 
 
 # ── Cases + intake + review (Phase 2) ─────────────────────────────────────
@@ -209,3 +212,12 @@ def test_http_routes_share_the_same_functions():
         png = client.get("/api/docs/ref-synthetic/pages/1.png")
         assert png.status_code == 200 and png.content[:4] == b"\x89PNG"
         assert client.get("/api/docs/ref-proof/pages/1.png").status_code == 404
+
+        # Data reset: HTTP only, confirmed, re-seeds the reference cases.
+        assert "reset" not in {t for t in T}
+        mine = client.post("/api/cases", json={"name": "Scratch"}).json()["case"]["id"]
+        assert client.post("/api/admin/reset", json={}).status_code == 400
+        r = client.post("/api/admin/reset", json={"confirm": "reset"})
+        assert r.status_code == 200 and mine not in r.json()["cases"] and "ref-k1s" in r.json()["cases"]
+        assert client.get(f"/api/cases/{mine}").status_code == 404
+        assert client.get("/api/cases/ref-k1s").json()["case"]["k1s"] == {"approved": 3}

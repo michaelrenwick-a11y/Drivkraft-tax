@@ -27,7 +27,7 @@ import { PdfPane } from "./pdf-pane";
 
 type Tab = "boxes" | "exceptions" | "ledger";
 
-export function K1Review({ caseId, docId }: { caseId: string; docId: string }) {
+export function K1Review({ caseId, docId, initialPath = null }: { caseId: string; docId: string; initialPath?: string | null }) {
   const router = useRouter();
   const toast = useToast();
   const { paletteOpen } = useUI();
@@ -36,7 +36,8 @@ export function K1Review({ caseId, docId }: { caseId: string; docId: string }) {
   });
   const [tab, setTab] = useState<Tab>("boxes");
   const [showAll, setShowAll] = useState(false);
-  const [selPath, setSelPath] = useState<string | null>(null);
+  // A return line's "Box 11 A · Greenfield" link lands here with ?box=<path> selected.
+  const [selPath, setSelPath] = useState<string | null>(initialPath);
   const [editing, setEditing] = useState<Entry | null>(null);
   const [busy, setBusy] = useState(false);
 

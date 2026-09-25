@@ -61,8 +61,9 @@ def test_mapping_names_only_real_nodes_and_engine_fields():
             rules = [rule] if "disposition" in rule else [rule.get("default") or {}, *(rule.get("codes") or {}).values()]
             for r in rules:
                 assert not r or r["disposition"] in translator.DISPOSITIONS
+                node_schema = engine.node_schema(r["node"]) if r.get("node") else schema
                 for f in [r.get("field"), *(s["field"] for s in (r.get("statement") or {}).values())]:
-                    assert f is None or f in schema, f"{part}.{key} → {f} not in the engine schema"
+                    assert f is None or f in node_schema, f"{part}.{key} → {f} not in the engine schema"
             for code in (rule.get("codes") or {}):
                 assert code in tax[part]["children"][key]["codes"], f"mapping has unknown code {key}.{code}"
 

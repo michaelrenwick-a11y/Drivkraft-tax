@@ -23,7 +23,6 @@
       "box7_royalties": 5000.0,
       "box8_net_st_cap_gain": -3200.0,
       "box9a_net_lt_cap_gain": 45000.0,
-      "box9b_collectibles_gain": 0.0,
       "box9c_unrecaptured_1250": 12000.0,
       "box10_net_1231": 8500.0,
       "box11_other_income": 12500.0,
@@ -34,7 +33,44 @@
       "box20_ubia": 500000.0,
       "box20_sstb": false,
       "box17_amt_adjustment": 3200.0
-    }
+    },
+    "forms": [
+      {
+        "node_type": "k1_partnership",
+        "item": {
+          "partnership_name": "Greenfield Capital Partners LP",
+          "box1_ordinary_business": 150000.0,
+          "box2_rental_re": -25000.0,
+          "box3_other_rental": 0.0,
+          "box4a_guaranteed_services": 75000.0,
+          "box4b_guaranteed_capital": 25000.0,
+          "box5_interest": 18500.0,
+          "box6a_ordinary_dividends": 32000.0,
+          "box6b_qualified_dividends": 28000.0,
+          "box6c_dividend_equivalents": 0.0,
+          "box7_royalties": 5000.0,
+          "box8_net_st_cap_gain": -3200.0,
+          "box9a_net_lt_cap_gain": 45000.0,
+          "box9c_unrecaptured_1250": 12000.0,
+          "box10_net_1231": 8500.0,
+          "box11_other_income": 12500.0,
+          "box12_section_179": 50000.0,
+          "box14a_se_earnings": 0.0,
+          "box20z_qbi": 150000.0,
+          "box20_w2_wages": 80000.0,
+          "box20_ubia": 500000.0,
+          "box20_sstb": false,
+          "box17_amt_adjustment": 3200.0
+        }
+      },
+      {
+        "node_type": "schedule_a",
+        "item": {
+          "line_9_investment_interest": 8200.0,
+          "line_11_cash_contributions": 15000.0
+        }
+      }
+    ]
   },
   "errors": [],
   "flags": [
@@ -46,22 +82,15 @@
       "fix_hint": "Acknowledge it before approval: this amount won't reach the 1040 until a later phase routes it."
     },
     {
-      "code": "calculation_incomplete",
-      "message": "Box 13 A (Cash contributions (60%)) isn't in the calculation: Engine accepts box13_deductions but never routes it (v2.0.4); Schedule A / Form 4952 routing is a later phase",
-      "path": "part_iii.box_13.A",
-      "severity": "warning",
-      "fix_hint": "Acknowledge it before approval: this amount won't reach the 1040 until a later phase routes it."
-    },
-    {
-      "code": "calculation_incomplete",
-      "message": "Box 13 H (Investment interest expense) isn't in the calculation: Engine accepts box13_deductions but never routes it (v2.0.4); Schedule A / Form 4952 routing is a later phase",
+      "code": "investment_interest_unlimited",
+      "message": "Box 13 H (Investment interest expense): → Schedule A line 9; OpenTax has no Form 4952 input, so the net-investment-income limit isn't applied",
       "path": "part_iii.box_13.H",
       "severity": "warning",
-      "fix_hint": "Acknowledge it before approval: this amount won't reach the 1040 until a later phase routes it."
+      "fix_hint": "Form 4952 isn't applied: confirm net investment income covers this interest, or reduce it with edit_k1_value and a reason."
     },
     {
       "code": "calculation_incomplete",
-      "message": "Box 13 K (Excess business interest expense (EBIE)) isn't in the calculation: Engine accepts box13_deductions but never routes it (v2.0.4); Schedule A / Form 4952 routing is a later phase",
+      "message": "Box 13 K (Excess business interest expense (EBIE)) isn't in the calculation: No OpenTax input takes this deduction from a K-1",
       "path": "part_iii.box_13.K",
       "severity": "warning",
       "fix_hint": "Acknowledge it before approval: this amount won't reach the 1040 until a later phase routes it."
@@ -117,11 +146,11 @@
     }
   ],
   "summary": {
-    "collapsed": 2,
+    "collapsed": 3,
     "derived": 5,
     "informational": 33,
     "mapped": 17,
-    "unsupported": 9
+    "unsupported": 8
   },
   "reconciliation": {
     "fields": {
@@ -185,11 +214,6 @@
         "ledger": 45000.0,
         "ok": true
       },
-      "box9b_collectibles_gain": {
-        "sent": 0.0,
-        "ledger": 0.0,
-        "ok": true
-      },
       "box9c_unrecaptured_1250": {
         "sent": 12000.0,
         "ledger": 12000.0,
@@ -233,6 +257,16 @@
       "box20_ubia": {
         "sent": 500000.0,
         "ledger": 500000.0,
+        "ok": true
+      },
+      "schedule_a.line_11_cash_contributions": {
+        "sent": 15000.0,
+        "ledger": 15000.0,
+        "ok": true
+      },
+      "schedule_a.line_9_investment_interest": {
+        "sent": 8200.0,
+        "ledger": 8200.0,
         "ok": true
       }
     },
@@ -731,9 +765,8 @@
       "semantic_id": "collectibles_gain",
       "label": "Collectibles (28%) gain (loss)",
       "value": 0.0,
-      "disposition": "mapped",
-      "field": "box9b_collectibles_gain",
-      "note": "Not the legacy box9b_unrecaptured_1250",
+      "disposition": "unsupported",
+      "note": "Sending box9b_collectibles_gain makes OpenTax 2.0.4 drop regular income tax to 0; the gain stays in 9a, taxed at ≤ 20% instead of 28%",
       "unverified": false
     },
     {
@@ -796,8 +829,10 @@
       "semantic_id": "other_deductions.cash_contributions_60",
       "label": "Cash contributions (60%)",
       "value": 15000.0,
-      "disposition": "unsupported",
-      "note": "Engine accepts box13_deductions but never routes it (v2.0.4); Schedule A / Form 4952 routing is a later phase",
+      "disposition": "collapsed",
+      "field": "line_11_cash_contributions",
+      "node": "schedule_a",
+      "note": "→ Schedule A line 11",
       "unverified": false
     },
     {
@@ -807,8 +842,10 @@
       "semantic_id": "other_deductions.investment_interest",
       "label": "Investment interest expense",
       "value": 8200.0,
-      "disposition": "unsupported",
-      "note": "Engine accepts box13_deductions but never routes it (v2.0.4); Schedule A / Form 4952 routing is a later phase",
+      "disposition": "mapped",
+      "field": "line_9_investment_interest",
+      "node": "schedule_a",
+      "note": "→ Schedule A line 9; OpenTax has no Form 4952 input, so the net-investment-income limit isn't applied",
       "unverified": false
     },
     {
@@ -819,7 +856,7 @@
       "label": "Excess business interest expense (EBIE)",
       "value": 22000.0,
       "disposition": "unsupported",
-      "note": "Engine accepts box13_deductions but never routes it (v2.0.4); Schedule A / Form 4952 routing is a later phase",
+      "note": "No OpenTax input takes this deduction from a K-1",
       "unverified": false
     },
     {

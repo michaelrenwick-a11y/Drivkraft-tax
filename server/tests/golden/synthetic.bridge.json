@@ -23,14 +23,46 @@
       "box7_royalties": 800.0,
       "box8_net_st_cap_gain": 94000.0,
       "box9a_net_lt_cap_gain": 897700.0,
-      "box9b_collectibles_gain": 394600.0,
       "box9c_unrecaptured_1250": 95300.0,
       "box10_net_1231": 16100.0,
       "box11_other_income": 600700.0,
       "box12_section_179": 75000.0,
       "box14a_se_earnings": 104600.0,
       "box17_amt_adjustment": 96200.0
-    }
+    },
+    "forms": [
+      {
+        "node_type": "k1_partnership",
+        "item": {
+          "partnership_name": "COPPERLEAF REAL ESTATE FUND V, L.P.",
+          "box1_ordinary_business": 556000.0,
+          "box2_rental_re": 28800.0,
+          "box3_other_rental": 4800.0,
+          "box4a_guaranteed_services": 500.0,
+          "box4b_guaranteed_capital": 500.0,
+          "box5_interest": 434000.0,
+          "box6a_ordinary_dividends": 253000.0,
+          "box6b_qualified_dividends": 123500.0,
+          "box6c_dividend_equivalents": 52700.0,
+          "box7_royalties": 800.0,
+          "box8_net_st_cap_gain": 94000.0,
+          "box9a_net_lt_cap_gain": 897700.0,
+          "box9c_unrecaptured_1250": 95300.0,
+          "box10_net_1231": 16100.0,
+          "box11_other_income": 600700.0,
+          "box12_section_179": 75000.0,
+          "box14a_se_earnings": 104600.0,
+          "box17_amt_adjustment": 96200.0
+        }
+      },
+      {
+        "node_type": "schedule_a",
+        "item": {
+          "line_9_investment_interest": 313000.0,
+          "line_11_cash_contributions": 85700.0
+        }
+      }
+    ]
   },
   "errors": [],
   "flags": [
@@ -64,6 +96,13 @@
     },
     {
       "code": "calculation_incomplete",
+      "message": "Box 9b (Collectibles (28%) gain (loss)) isn't in the calculation: Sending box9b_collectibles_gain makes OpenTax 2.0.4 drop regular income tax to 0; the gain stays in 9a, taxed at ≤ 20% instead of 28%",
+      "path": "part_iii.box_9b",
+      "severity": "warning",
+      "fix_hint": "Acknowledge it before approval: this amount won't reach the 1040 until a later phase routes it."
+    },
+    {
+      "code": "calculation_incomplete",
       "message": "Box 11 C (Section 1256 contracts and straddles) isn't in the calculation: Needs its own form or character (capital, §1256, exclusion); summing into line 8z would misstate tax",
       "path": "part_iii.box_11.C",
       "severity": "warning",
@@ -77,36 +116,29 @@
       "fix_hint": "Acknowledge it before approval: this amount won't reach the 1040 until a later phase routes it."
     },
     {
-      "code": "calculation_incomplete",
-      "message": "Box 13 A (Cash contributions (60%)) isn't in the calculation: Engine accepts box13_deductions but never routes it (v2.0.4); Schedule A / Form 4952 routing is a later phase",
-      "path": "part_iii.box_13.A",
-      "severity": "warning",
-      "fix_hint": "Acknowledge it before approval: this amount won't reach the 1040 until a later phase routes it."
-    },
-    {
-      "code": "calculation_incomplete",
-      "message": "Box 13 B (Cash contributions (30%)) isn't in the calculation: Engine accepts box13_deductions but never routes it (v2.0.4); Schedule A / Form 4952 routing is a later phase",
+      "code": "agi_limit_simplified",
+      "message": "Box 13 B (Cash contributions (30%)): → Schedule A line 11; the 30% AGI limit isn't applied separately",
       "path": "part_iii.box_13.B",
       "severity": "warning",
-      "fix_hint": "Acknowledge it before approval: this amount won't reach the 1040 until a later phase routes it."
+      "fix_hint": "OpenTax applies one charitable AGI limit. If total gifts are near 30% of AGI, check the 30%/20% limits by hand."
     },
     {
-      "code": "calculation_incomplete",
-      "message": "Box 13 AE (Deductions — portfolio income) isn't in the calculation: Engine accepts box13_deductions but never routes it (v2.0.4); Schedule A / Form 4952 routing is a later phase",
-      "path": "part_iii.box_13.AE",
-      "severity": "warning",
-      "fix_hint": "Acknowledge it before approval: this amount won't reach the 1040 until a later phase routes it."
-    },
-    {
-      "code": "calculation_incomplete",
-      "message": "Box 13 H (Investment interest expense) isn't in the calculation: Engine accepts box13_deductions but never routes it (v2.0.4); Schedule A / Form 4952 routing is a later phase",
+      "code": "deduction_sign_normalized",
+      "message": "Box 13 H is -313,000.00 on the K-1; sent to the engine as the deduction 313,000.00",
       "path": "part_iii.box_13.H",
       "severity": "warning",
-      "fix_hint": "Acknowledge it before approval: this amount won't reach the 1040 until a later phase routes it."
+      "fix_hint": "Confirm the K-1 shows this as a deduction (parentheses). If it's really a negative deduction, edit it with a reason."
+    },
+    {
+      "code": "investment_interest_unlimited",
+      "message": "Box 13 H (Investment interest expense): → Schedule A line 9; OpenTax has no Form 4952 input, so the net-investment-income limit isn't applied",
+      "path": "part_iii.box_13.H",
+      "severity": "warning",
+      "fix_hint": "Form 4952 isn't applied: confirm net investment income covers this interest, or reduce it with edit_k1_value and a reason."
     },
     {
       "code": "calculation_incomplete",
-      "message": "Box 13 R (Pensions and IRAs) isn't in the calculation: Engine accepts box13_deductions but never routes it (v2.0.4); Schedule A / Form 4952 routing is a later phase",
+      "message": "Box 13 R (Pensions and IRAs) isn't in the calculation: No OpenTax input takes this deduction from a K-1",
       "path": "part_iii.box_13.R",
       "severity": "warning",
       "fix_hint": "Acknowledge it before approval: this amount won't reach the 1040 until a later phase routes it."
@@ -134,11 +166,11 @@
     }
   ],
   "summary": {
-    "collapsed": 3,
+    "collapsed": 5,
     "derived": 1,
-    "informational": 26,
+    "informational": 27,
     "mapped": 17,
-    "unsupported": 10
+    "unsupported": 7
   },
   "reconciliation": {
     "fields": {
@@ -202,11 +234,6 @@
         "ledger": 897700.0,
         "ok": true
       },
-      "box9b_collectibles_gain": {
-        "sent": 394600.0,
-        "ledger": 394600.0,
-        "ok": true
-      },
       "box9c_unrecaptured_1250": {
         "sent": 95300.0,
         "ledger": 95300.0,
@@ -235,6 +262,16 @@
       "box17_amt_adjustment": {
         "sent": 96200.0,
         "ledger": 96200.0,
+        "ok": true
+      },
+      "schedule_a.line_11_cash_contributions": {
+        "sent": 85700.0,
+        "ledger": 85700.0,
+        "ok": true
+      },
+      "schedule_a.line_9_investment_interest": {
+        "sent": 313000.0,
+        "ledger": 313000.0,
         "ok": true
       }
     },
@@ -715,9 +752,8 @@
       "semantic_id": "collectibles_gain",
       "label": "Collectibles (28%) gain (loss)",
       "value": 394600.0,
-      "disposition": "mapped",
-      "field": "box9b_collectibles_gain",
-      "note": "Not the legacy box9b_unrecaptured_1250",
+      "disposition": "unsupported",
+      "note": "Sending box9b_collectibles_gain makes OpenTax 2.0.4 drop regular income tax to 0; the gain stays in 9a, taxed at ≤ 20% instead of 28%",
       "unverified": false
     },
     {
@@ -791,8 +827,10 @@
       "semantic_id": "other_deductions.cash_contributions_60",
       "label": "Cash contributions (60%)",
       "value": 29400.0,
-      "disposition": "unsupported",
-      "note": "Engine accepts box13_deductions but never routes it (v2.0.4); Schedule A / Form 4952 routing is a later phase",
+      "disposition": "collapsed",
+      "field": "line_11_cash_contributions",
+      "node": "schedule_a",
+      "note": "→ Schedule A line 11",
       "unverified": false
     },
     {
@@ -802,8 +840,10 @@
       "semantic_id": "other_deductions.cash_contributions_30",
       "label": "Cash contributions (30%)",
       "value": 56300.0,
-      "disposition": "unsupported",
-      "note": "Engine accepts box13_deductions but never routes it (v2.0.4); Schedule A / Form 4952 routing is a later phase",
+      "disposition": "collapsed",
+      "field": "line_11_cash_contributions",
+      "node": "schedule_a",
+      "note": "→ Schedule A line 11; the 30% AGI limit isn't applied separately",
       "unverified": false
     },
     {
@@ -813,8 +853,8 @@
       "semantic_id": "other_deductions.portfolio_deductions",
       "label": "Deductions — portfolio income",
       "value": -290600.0,
-      "disposition": "unsupported",
-      "note": "Engine accepts box13_deductions but never routes it (v2.0.4); Schedule A / Form 4952 routing is a later phase",
+      "disposition": "informational",
+      "note": "Portfolio deductions (§67(g)): not deductible for 2018–2025",
       "unverified": false
     },
     {
@@ -824,8 +864,11 @@
       "semantic_id": "other_deductions.investment_interest",
       "label": "Investment interest expense",
       "value": -313000.0,
-      "disposition": "unsupported",
-      "note": "Engine accepts box13_deductions but never routes it (v2.0.4); Schedule A / Form 4952 routing is a later phase",
+      "disposition": "mapped",
+      "field": "line_9_investment_interest",
+      "node": "schedule_a",
+      "note": "→ Schedule A line 9; OpenTax has no Form 4952 input, so the net-investment-income limit isn't applied",
+      "sent": 313000.0,
       "unverified": false
     },
     {
@@ -836,7 +879,7 @@
       "label": "Pensions and IRAs",
       "value": -52200.0,
       "disposition": "unsupported",
-      "note": "Engine accepts box13_deductions but never routes it (v2.0.4); Schedule A / Form 4952 routing is a later phase",
+      "note": "No OpenTax input takes this deduction from a K-1",
       "unverified": false
     },
     {

@@ -17,7 +17,21 @@
       "box6a_ordinary_dividends": 1250.0,
       "box6b_qualified_dividends": 1250.0,
       "box9a_net_lt_cap_gain": 2250.0
-    }
+    },
+    "forms": [
+      {
+        "node_type": "k1_partnership",
+        "item": {
+          "partnership_name": "OAK VENTURES LLP",
+          "box1_ordinary_business": 29265.0,
+          "box2_rental_re": 21000.0,
+          "box5_interest": 120.0,
+          "box6a_ordinary_dividends": 1250.0,
+          "box6b_qualified_dividends": 1250.0,
+          "box9a_net_lt_cap_gain": 2250.0
+        }
+      }
+    ]
   },
   "errors": [],
   "flags": [
@@ -32,8 +46,8 @@
   "summary": {
     "derived": 1,
     "informational": 21,
-    "mapped": 16,
-    "unsupported": 1
+    "mapped": 15,
+    "unsupported": 2
   },
   "reconciliation": {
     "fields": {
@@ -443,9 +457,8 @@
       "semantic_id": "collectibles_gain",
       "label": "Collectibles (28%) gain (loss)",
       "value": null,
-      "disposition": "mapped",
-      "field": "box9b_collectibles_gain",
-      "note": "Not the legacy box9b_unrecaptured_1250",
+      "disposition": "unsupported",
+      "note": "Sending box9b_collectibles_gain makes OpenTax 2.0.4 drop regular income tax to 0; the gain stays in 9a, taxed at ≤ 20% instead of 28%",
       "unverified": false
     },
     {

@@ -31,6 +31,9 @@ FIX_HINTS: dict[str, str] = {
     "engine_se_fallback": "No Box 14 A, so OpenTax uses Box 4a for SE earnings. Confirm that's right for this partner.",
     "passive_inferred": "Confirm the partner's material participation; OpenTax assumes passive when 14 A is empty or zero.",
     "multiple_199a_activities": "QBI from several §199A activities was summed. Check the statement if they need separate treatment.",
+    "deduction_sign_normalized": "Confirm the K-1 shows this as a deduction (parentheses). If it's really a negative deduction, edit it with a reason.",
+    "agi_limit_simplified": "OpenTax applies one charitable AGI limit. If total gifts are near 30% of AGI, check the 30%/20% limits by hand.",
+    "investment_interest_unlimited": "Form 4952 isn't applied: confirm net investment income covers this interest, or reduce it with edit_k1_value and a reason.",
     "statement_review": "Read the attached statement on the PDF; it carries information but no amount.",
 }
 

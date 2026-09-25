@@ -73,8 +73,10 @@ class LedgerEntry:
     value: Any
     disposition: str
     field: str | None = None
+    node: str | None = None          # engine node when not the K-1 node (e.g. schedule_a)
     note: str | None = None
     statement: str | None = None     # attached statement's classification, if any
+    sent: Any = None                 # what the engine got, when it differs from value (sign-normalized deduction)
     unverified: bool = False
 
     @property
@@ -84,6 +86,7 @@ class LedgerEntry:
     def to_dict(self) -> dict:
         d = asdict(self)
         d["value"] = _jsonable(self.value)
+        d["sent"] = _jsonable(self.sent)
         return {k: v for k, v in d.items() if v is not None and v is not False or k in ("value", "unverified")}
 
 
@@ -108,7 +111,45 @@ class BridgeResult:
     flags: list[Issue] = field(default_factory=list)
     ledger: list[LedgerEntry] = field(default_factory=list)
     item: dict | None = None                      # the k1_partnership item for the engine
+    extra: dict[str, dict] = field(default_factory=dict)   # other engine nodes (schedule_a) → fields
     reconciliation: dict = field(default_factory=dict)
+
+    def forms(self, overrides: dict[str, Any] | None = None) -> list[tuple[str, dict]]:
+        """Every engine form this K-1 contributes: the K-1 item first, then e.g. schedule_a.
+
+        `overrides` ({ledger path: amount or None}) recomposes the numeric fields from
+        the ledger, for scenarios and leave-one-out attribution. A None removes the entry.
+        """
+        if self.item is None:
+            return []
+        k1 = mapping()["meta"]["opentax_node"]
+        forms = {k1: dict(self.item), **{n: dict(f) for n, f in self.extra.items()}}
+        if overrides:
+            totals: dict[tuple[str, str], Decimal | None] = {}
+            for e in self.ledger:
+                if e.disposition not in ROUTED or not e.field:
+                    continue
+                node = e.node or k1
+                if not isinstance(forms.get(node, {}).get(e.field), Decimal) and e.path not in overrides:
+                    continue   # non-numeric fields (name, SSTB) aren't recomposed
+                if e.path in overrides:
+                    amount = _decimal(overrides[e.path])
+                    if amount is not None and rule_for(*e.path.split(".")[:2], e.code).get("sign") == "deduction":
+                        amount = abs(amount)
+                else:
+                    amount = e.sent if e.sent is not None else e.amount
+                key = (node, e.field)
+                if amount is not None:
+                    totals[key] = (totals.get(key) or Decimal(0)) + amount
+                else:
+                    totals.setdefault(key, None)
+            for (node, f), total in totals.items():
+                form = forms.setdefault(node, {})
+                if total is None:
+                    form.pop(f, None)
+                else:
+                    form[f] = total
+        return [(n, {k: _jsonable(v) for k, v in f.items()}) for n, f in forms.items() if f or n == k1]
 
     @property
     def calculation_incomplete(self) -> bool:
@@ -122,6 +163,7 @@ class BridgeResult:
             "opentax": None if self.item is None else {
                 "node_type": mapping()["meta"]["opentax_node"],
                 "item": {k: _jsonable(v) for k, v in self.item.items()},
+                "forms": [{"node_type": n, "item": i} for n, i in self.forms()],
             },
             "errors": [e.to_dict() for e in self.errors],
             "flags": [f.to_dict() for f in self.flags],
@@ -198,16 +240,23 @@ def bridge_k1(otd_path: Path | str) -> BridgeResult:
 
     if not result.errors:
         result.status = "ok"
-        schema_order = list(engine.node_schema(meta["opentax_node"]))
-        result.item = {k: walker.item[k] for k in sorted(walker.item, key=schema_order.index)}
+        for node, fields in walker.forms.items():
+            order = list(engine.node_schema(node))
+            ordered = {k: fields[k] for k in sorted(fields, key=order.index)}
+            if node == meta["opentax_node"]:
+                result.item = ordered
+            else:
+                result.extra[node] = ordered
     return result
 
 
 class _Walker:
     def __init__(self, result: BridgeResult):
         self.result = result
-        self.item: dict[str, Any] = {}
-        self.sources: dict[str, list[str]] = defaultdict(list)   # field → ledger paths
+        k1 = mapping()["meta"]["opentax_node"]
+        self.forms: dict[str, dict[str, Any]] = {k1: {}}           # engine node → field → value
+        self.item = self.forms[k1]
+        self.sources: dict[str, list[str]] = defaultdict(list)   # "node.field" (or field) → ledger paths
         self.z_activities = 0
 
     def error(self, code: str, message: str, path: str) -> None:
@@ -276,7 +325,7 @@ class _Walker:
         entry = LedgerEntry(
             path=path, box=_box_name(key), code=code,
             semantic_id=tnode.get("semantic_id"), label=tnode.get("label"),
-            value=value, disposition=disposition, field=rule.get("field"),
+            value=value, disposition=disposition, field=rule.get("field"), node=rule.get("node"),
             note=rule.get("note"), statement=statement, unverified=unverified,
         )
         self.result.ledger.append(entry)
@@ -289,11 +338,20 @@ class _Walker:
             value = raw
         elif amount is None:
             return self.error("not_numeric", f"{path} has non-numeric value {raw!r}", path)
+        elif rule.get("sign") == "deduction" and amount < 0:
+            value = entry.sent = -amount     # a deduction printed in parentheses is still a deduction
+        target = self.forms.setdefault(rule["node"], {}) if rule.get("node") else self.item
+        key = field_key(rule.get("node"), f)
         # Only collapsed codes and multiple §199A activities may share a field.
-        if f in self.item and disposition != "collapsed" and not (disposition == "derived" and self.z_activities > 1):
-            return self.error("field_collision", f"Two OTD nodes map to {f}: {self.sources[f][0]} and {path}", path)
-        self.item[f] = self.item.get(f, Decimal(0)) + value if isinstance(value, Decimal) else value
-        self.sources[f].append(path)
+        if f in target and disposition != "collapsed" and not (disposition == "derived" and self.z_activities > 1):
+            return self.error("field_collision", f"Two OTD nodes map to {key}: {self.sources[key][0]} and {path}", path)
+        target[f] = target.get(f, Decimal(0)) + value if isinstance(value, Decimal) else value
+        self.sources[key].append(path)
+
+
+def field_key(node: str | None, f: str) -> str:
+    """Reconciliation / source key: bare field for the K-1 node, `node.field` otherwise."""
+    return f if not node or node == mapping()["meta"]["opentax_node"] else f"{node}.{f}"
 
 
 def _located(message: str) -> str | None:
@@ -323,12 +381,12 @@ def _first_line(name_address: str) -> str:
 # ── Checks ────────────────────────────────────────────────────────────────
 
 def _check_engine_constraints(result: BridgeResult, w: _Walker) -> None:
-    schema = engine.node_schema(mapping()["meta"]["opentax_node"])
-    for f, val in w.item.items():
-        spec = schema.get(f)
-        where = ", ".join(w.sources[f])
+    for node, f, val in _sent(w):
+        spec = engine.node_schema(node).get(f)
+        key = field_key(node, f)
+        where = ", ".join(w.sources[key])
         if spec is None:
-            result.errors.append(Issue("field_not_in_engine", f"Mapping sends {f}, which OpenTax doesn't accept", where))
+            result.errors.append(Issue("field_not_in_engine", f"Mapping sends {key}, which OpenTax doesn't accept", where))
         elif spec.type == "number" and not isinstance(val, Decimal):
             result.errors.append(Issue("engine_type", f"{f} must be a number, got {val!r}", where))
         elif spec.type == "boolean" and not isinstance(val, bool):
@@ -344,16 +402,22 @@ def _check_engine_constraints(result: BridgeResult, w: _Walker) -> None:
                                    "part_i.item_b"))
 
 
+def _sent(w: _Walker) -> list[tuple[str, str, Any]]:
+    return [(node, f, v) for node, fields in w.forms.items() for f, v in fields.items()]
+
+
 def _reconcile(result: BridgeResult, w: _Walker, body: dict) -> None:
     ledger = result.ledger
     # a. Every sent field equals the sum of its routed ledger entries.
     fields = {}
-    for f, sent in w.item.items():
+    for node, f, sent in _sent(w):
         if not isinstance(sent, Decimal):
             continue
-        total = sum((e.amount for e in ledger if e.field == f and e.disposition in ROUTED and e.amount is not None),
-                    Decimal(0))
-        fields[f] = {"sent": float(sent), "ledger": float(total), "ok": sent == total}
+        key = field_key(node, f)
+        total = sum((e.sent if e.sent is not None else e.amount for e in ledger
+                     if e.field == f and field_key(e.node, f) == key and e.disposition in ROUTED
+                     and e.amount is not None), Decimal(0))
+        fields[key] = {"sent": float(sent), "ledger": float(total), "ok": sent == total}
     # b. Every Part III box: ledger entry count and total match the raw OTD.
     boxes = {}
     for key, node in (body.get("part_iii") or {}).items():
@@ -394,6 +458,13 @@ def _raise_flags(result: BridgeResult, w: _Walker) -> None:
         elif e.disposition == "unsupported" and e.value is None and e.statement:
             flags.append(Issue("statement_review", f"Box {e.box} {e.code} carries a statement ({e.statement}) with no amount; review it",
                                e.path, "info"))
+        rule = rule_for(*e.path.split(".")[:2], e.code) if e.code and ".statement." not in e.path else None
+        if e.sent is not None:
+            flags.append(Issue("deduction_sign_normalized",
+                               f"Box {e.box} {e.code} is {e.amount:,.2f} on the K-1; sent to the engine as the deduction {e.sent:,.2f}",
+                               e.path, "warning"))
+        if rule and rule.get("flag") and e.amount:
+            flags.append(Issue(rule["flag"], f"Box {e.box} {e.code} ({e.label}): {e.note}", e.path, "warning"))
         if e.unverified:
             flags.append(Issue("unverified_value", "Source value unverified; omitted from the calculation" if e.value is None
                                else "Source value unverified", e.path, "warning"))

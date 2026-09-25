@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import secrets
+import shutil
 import sqlite3
 import threading
 from contextlib import contextmanager
@@ -56,6 +57,13 @@ CREATE TABLE IF NOT EXISTS inputs (
   node_type TEXT NOT NULL,
   data TEXT NOT NULL,              -- JSON
   label TEXT,
+  created TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS scenarios (
+  id TEXT PRIMARY KEY,
+  case_id TEXT NOT NULL REFERENCES cases(id),
+  name TEXT NOT NULL,
+  changes TEXT NOT NULL,           -- JSON: run_scenario changes
   created TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS events (
@@ -123,7 +131,7 @@ def _row(r: sqlite3.Row | None) -> dict | None:
     if r is None:
         return None
     d = dict(r)
-    for k in ("progress", "acknowledged", "old_value", "new_value", "data"):
+    for k in ("progress", "acknowledged", "old_value", "new_value", "data", "changes"):
         if k in d and isinstance(d[k], str):
             d[k] = json.loads(d[k])
     if "read_only" in d:
@@ -211,6 +219,42 @@ def insert_input(case_id: str, node_type: str, data: dict, label: str | None = N
 def list_inputs(case_id: str) -> list[dict]:
     with connect() as db:
         return [_row(r) for r in db.execute("SELECT * FROM inputs WHERE case_id = ? ORDER BY id", (case_id,))]
+
+
+def replace_inputs(case_id: str, rows: list[tuple[str, dict, str | None]]) -> list[int]:
+    """Swap all of a case's inputs in one transaction."""
+    ts = now()
+    with connect() as db:
+        db.execute("DELETE FROM inputs WHERE case_id = ?", (case_id,))
+        return [db.execute("INSERT INTO inputs (case_id, node_type, data, label, created) VALUES (?, ?, ?, ?, ?)",
+                           (case_id, node, json.dumps(data), label, ts)).lastrowid for node, data, label in rows]
+
+
+def insert_scenario(case_id: str, name: str, changes: dict) -> dict:
+    row = {"id": new_id("scn"), "case_id": case_id, "name": name, "changes": changes, "created": now()}
+    with connect() as db:
+        db.execute("INSERT INTO scenarios (id, case_id, name, changes, created) VALUES (?, ?, ?, ?, ?)",
+                   (row["id"], case_id, name, json.dumps(changes), row["created"]))
+    return row
+
+
+def list_scenarios(case_id: str) -> list[dict]:
+    with connect() as db:
+        return [_row(r) for r in db.execute("SELECT * FROM scenarios WHERE case_id = ? ORDER BY created", (case_id,))]
+
+
+def delete_scenario(scenario_id: str) -> bool:
+    with connect() as db:
+        return db.execute("DELETE FROM scenarios WHERE id = ?", (scenario_id,)).rowcount > 0
+
+
+def reset() -> None:
+    """Delete every case, document, edit, input, scenario and event, and the case folders.
+    The caller re-seeds the reference cases."""
+    with connect() as db:
+        for table in ("edits", "inputs", "scenarios", "documents", "cases", "events"):
+            db.execute(f"DELETE FROM {table}")
+    shutil.rmtree(root() / "cases", ignore_errors=True)
 
 
 def log_event(tool: str, transport: str, ms: float, ok: bool, error_code: str | None = None) -> None:

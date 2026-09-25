@@ -9,7 +9,6 @@ import { CaseStatusPill, DocStatusPill } from "@/components/ui/doc-status";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
-import { StatusPill } from "@/components/ui/status-pill";
 import { useToast } from "@/components/ui/toast";
 import { FILING_STATUS_LABELS, useApi, type CaseSummary, type DocSummary } from "@/lib/api";
 import { displayName, relativeTime } from "@/lib/format";
@@ -57,20 +56,25 @@ export function CaseView({ caseId, openAdd }: { caseId: string; openAdd: boolean
   const next = documents.find((d) => d.status === "blocked" || d.status === "needs_review");
   const allApproved = documents.length > 0 && documents.every((d) => d.status === "approved");
 
-  const primary = c.read_only ? null : next ? (
-    <Button variant="primary" onClick={() => router.push(`/cases/${caseId}/k1/${next.id}`)}>
-      Review K-1
-      <ArrowRight className="size-4" aria-hidden />
+  const anyApproved = documents.some((d) => d.status === "approved");
+  const toReturn = (
+    <Button variant={allApproved || c.read_only ? "primary" : "secondary"} onClick={() => router.push(`/cases/${caseId}/return`)}>
+      <Calculator className="size-4" aria-hidden />
+      {c.read_only ? "View return" : "Calculate return"}
     </Button>
-  ) : allApproved ? (
-    <span className="flex items-center gap-2">
-      <Button variant="primary" disabled>
-        <Calculator className="size-4" aria-hidden />
-        Calculate return
-      </Button>
-      <StatusPill kind="planned" label="Phase 3" />
-    </span>
-  ) : null;
+  );
+  const primary =
+    !c.read_only && next ? (
+      <>
+        {anyApproved && toReturn}
+        <Button variant="primary" onClick={() => router.push(`/cases/${caseId}/k1/${next.id}`)}>
+          Review K-1
+          <ArrowRight className="size-4" aria-hidden />
+        </Button>
+      </>
+    ) : anyApproved ? (
+      toReturn
+    ) : null;
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-6 sm:px-8 sm:py-8">

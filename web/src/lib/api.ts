@@ -116,6 +116,89 @@ export type CaseSummary = {
   next_action: string;
 };
 
+/* ── Return (Phase 3) ─────────────────────────────────────────────────── */
+
+export type SectionId = "income" | "agi" | "deductions" | "tax" | "payments" | "result";
+
+export type ReturnLine = { key: string; line: string; label: string; section: SectionId; value: number; ref: string };
+
+export type Caveat = { code: string; severity: "error" | "warning" | "info"; message: string; fix_hint: string };
+
+export type IncludedK1 = {
+  doc_id: string;
+  label: string | null;
+  calculation_incomplete: boolean;
+  not_in_calculation: string[];
+  forms: string[];
+};
+
+export type ReturnCalc = {
+  case_id: string;
+  tax_year: number;
+  fingerprint: string;
+  headline: Record<string, number>;
+  lines: ReturnLine[];
+  sections: { id: SectionId; title: string }[];
+  caveats: Caveat[];
+  warnings: string[];
+  engine_failures: { node: string; message: string }[];
+  included: IncludedK1[];
+  skipped: { doc_id: string; label: string | null; status: DocStatus; reason: string }[];
+  other_inputs: { id: number; node_type: string; label: string }[];
+  sources: Source[];
+};
+
+export type Contribution = {
+  ref: string;
+  kind: "k1" | "input" | "k1_box";
+  label: string;
+  contribution: number;
+  doc_id?: string;
+  path?: string;
+  amount?: number;
+  source?: Source;
+  interaction?: number;
+  boxes?: Contribution[];
+};
+
+export type LineExplanation = {
+  case_id: string;
+  line: { key: string; line: string; label: string; value: number };
+  contributions: Contribution[];
+  unattributed: number;
+  note: string;
+  sources: Source[];
+};
+
+export type ScenarioChanges = {
+  filing_status?: FilingStatus;
+  exclude?: string[];
+  k1_values?: Record<string, Record<string, number | null>>;
+  input_values?: Record<string, Record<string, number | null>>;
+};
+
+export type ScenarioRow = {
+  key: string;
+  line: string;
+  label: string;
+  section: SectionId;
+  base: number;
+  scenario: number;
+  delta: number;
+  headline: boolean;
+};
+
+export type ScenarioResult = {
+  case_id: string;
+  scenario: { id: string; name: string } | null;
+  applied: { change: string; label: string }[];
+  ignored: { doc_id: string; path: string; reason: string }[];
+  lines: ScenarioRow[];
+  engine_failures: { base: { node: string; message: string }[]; scenario: { node: string; message: string }[] };
+};
+
+export type SavedScenario = { id: string; name: string; changes: ScenarioChanges; created: string };
+
 export type Sample = { id: string; kind: "pdf" | "otd"; title: string; description: string; available: boolean };
 
 export type ToolError = { code: string; message: string; fix_hint: string; detail?: unknown };

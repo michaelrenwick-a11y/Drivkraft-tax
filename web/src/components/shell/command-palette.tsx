@@ -2,21 +2,22 @@
 
 import * as Dialog from "@radix-ui/react-dialog";
 import { Command } from "cmdk";
-import { CornerDownLeft, FilePlus2, MessageSquare, Monitor, Moon, Search, Sun, type LucideIcon } from "lucide-react";
+import { CornerDownLeft, FilePlus2, FolderOpen, MessageSquare, Monitor, Moon, Search, Sun, type LucideIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { useUI } from "@/components/providers";
 import { Kbd } from "@/components/ui/button";
-import { StatusPill } from "@/components/ui/status-pill";
+import { useApi, type Case } from "@/lib/api";
 import { NAV } from "@/lib/nav";
 
 /**
- * ⌘K palette. Phase 0 covers navigation, theme and panels; each later phase adds
- * its commands here (open case, approve K-1, run scenario…).
+ * ⌘K palette: navigation, cases, actions, theme. Each phase adds its commands
+ * here (Phase 2: new case, open case).
  */
 export function CommandPalette() {
-  const { paletteOpen, setPaletteOpen, setChatOpen, chatOpen, theme, setTheme } = useUI();
+  const { paletteOpen, setPaletteOpen, setChatOpen, chatOpen, theme, setTheme, setNewCaseOpen } = useUI();
   const router = useRouter();
+  const { data: cases } = useApi<{ cases: Case[] }>(paletteOpen ? "/cases" : null);
 
   const run = (fn: () => void) => {
     setPaletteOpen(false);
@@ -55,9 +56,25 @@ export function CommandPalette() {
                 ))}
               </Command.Group>
 
+              {!!cases?.cases.length && (
+                <Command.Group heading="Cases">
+                  {cases.cases.map((c) => (
+                    <Item
+                      key={c.id}
+                      icon={FolderOpen}
+                      keywords={["case", "open", c.id]}
+                      onSelect={() => run(() => router.push(`/cases/${c.id}`))}
+                      trailing={c.read_only ? <span className="text-xs text-fg-muted">Reference</span> : undefined}
+                    >
+                      {c.name}
+                    </Item>
+                  ))}
+                </Command.Group>
+              )}
+
               <Command.Group heading="Actions">
-                <Item icon={FilePlus2} disabled trailing={<StatusPill kind="planned" label="Phase 2" />}>
-                  New case from a synthetic K-1
+                <Item icon={FilePlus2} keywords={["create", "client", "k-1"]} onSelect={() => run(() => setNewCaseOpen(true))}>
+                  New case
                 </Item>
                 <Item icon={MessageSquare} keywords={["assistant", "ask"]} onSelect={() => run(() => setChatOpen(!chatOpen))} trailing={<Shortcut keys="⌘J" />}>
                   {chatOpen ? "Close chat" : "Open chat"}

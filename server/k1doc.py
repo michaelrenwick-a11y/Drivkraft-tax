@@ -222,18 +222,17 @@ def build_evidence(face: dict) -> dict:
 
 
 def evidence_for(evidence: dict, path: str) -> dict | None:
+    """Evidence for a path. `match` says how close it is: exact, entry (a statement
+    field or repeated code falls back to its entry) or box (the code isn't on the
+    face, so this is the whole box, usually a "* STMT" pointer)."""
     fields = evidence.get("fields") or {}
     if path in fields:
-        return fields[path]
-    # A statement field or a second occurrence falls back to its entry, then its box.
-    p = path.split(".statement.")[0]
+        return {**fields[path], "match": "exact"}
+    p = re.sub(r"\[\d+\]$", "", path.split(".statement.")[0])
     if p in fields:
-        return fields[p]
-    p = re.sub(r"\[\d+\]$", "", p)
-    if p in fields:
-        return fields[p]
+        return {**fields[p], "match": "entry"}
     box = ".".join(p.split(".")[:2])
-    return fields.get(box)
+    return {**fields[box], "match": "box"} if box in fields else None
 
 
 def page_info(pdf: Path) -> dict:

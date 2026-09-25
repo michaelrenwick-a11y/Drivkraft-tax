@@ -166,7 +166,7 @@ def _entry_out(doc: dict, e: dict, evidence: dict | None, edits: dict, flags: di
         "flags": flags.get(e["path"], []),
         "edited": e["path"] in edits,
         "evidence": None if not ev else {"page": ev["page"], "bbox": ev["bbox"], "text": ev.get("text"),
-                                         "status": ev.get("status")},
+                                         "status": ev.get("status"), "match": ev["match"]},
     }
     if e["path"] in edits:
         out["original_value"] = edits[e["path"]]["original"]
@@ -303,7 +303,10 @@ def get_evidence(doc_id: str, box: str, code: str | None = None) -> dict:
     sizes = (evidence.get("pages") or {}).get("sizes") or []
     page_size = sizes[ev["page"] - 1] if ev["page"] - 1 < len(sizes) else None
     return {"path": path, "label": k1doc.box_label(path), "available": True, "page": ev["page"],
-            "bbox": ev["bbox"], "text": ev.get("text"), "status": ev.get("status"), "page_size": page_size,
+            "bbox": ev["bbox"], "text": ev.get("text"), "status": ev.get("status"), "match": ev["match"],
+            "note": {"exact": None, "entry": "Statement detail: this is the face entry it belongs to.",
+                     "box": "This code isn't on the K-1 face; the box points to an attached statement."}[ev["match"]],
+            "page_size": page_size,
             "coordinate_frame": evidence["coordinate_frame"],
             "image_url": f"/api/docs/{doc_id}/pages/{ev['page']}.png",
             "sources": [source(doc, path)]}

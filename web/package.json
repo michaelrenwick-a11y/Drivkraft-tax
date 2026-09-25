@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.23",
+    "@radix-ui/react-tabs": "^1.1.21",
     "@radix-ui/react-tooltip": "^1.2.16",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",

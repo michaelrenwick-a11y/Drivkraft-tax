@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { NewCaseDialog } from "@/components/cases/new-case-dialog";
 import { ChatPanel } from "./chat-panel";
 import { CommandPalette } from "./command-palette";
 import { Header } from "./header";
@@ -24,6 +25,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </div>
       <ChatPanel />
       <CommandPalette />
+      <NewCaseDialog />
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import * as Tooltip from "@radix-ui/react-tooltip";
 import { createContext, useContext, useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
+import { ToastProvider } from "@/components/ui/toast";
 import { applyPreference, readPreference, subscribeTheme, type ThemePreference } from "@/lib/theme";
 
 type UIState = {
@@ -13,6 +14,8 @@ type UIState = {
   setChatOpen: (open: boolean) => void;
   navOpen: boolean;
   setNavOpen: (open: boolean) => void;
+  newCaseOpen: boolean;
+  setNewCaseOpen: (open: boolean) => void;
 };
 
 const UIContext = createContext<UIState | null>(null);
@@ -30,6 +33,7 @@ export function Providers({ children }: { children: ReactNode }) {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
+  const [newCaseOpen, setNewCaseOpen] = useState(false);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -49,9 +53,22 @@ export function Providers({ children }: { children: ReactNode }) {
 
   return (
     <UIContext.Provider
-      value={{ theme, setTheme: applyPreference, paletteOpen, setPaletteOpen, chatOpen, setChatOpen, navOpen, setNavOpen }}
+      value={{
+        theme,
+        setTheme: applyPreference,
+        paletteOpen,
+        setPaletteOpen,
+        chatOpen,
+        setChatOpen,
+        navOpen,
+        setNavOpen,
+        newCaseOpen,
+        setNewCaseOpen,
+      }}
     >
-      <Tooltip.Provider delayDuration={300}>{children}</Tooltip.Provider>
+      <Tooltip.Provider delayDuration={300}>
+        <ToastProvider>{children}</ToastProvider>
+      </Tooltip.Provider>
     </UIContext.Provider>
   );
 }

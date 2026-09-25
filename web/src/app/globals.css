@@ -1,0 +1,150 @@
+@import "tailwindcss";
+
+/* Dark mode follows the resolved data-theme on <html> (set before paint in layout.tsx). */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/*
+ * Design tokens (planning/05-ux.md). Components use these names only, never raw
+ * palette colors, so light/dark and future refinements stay in one place.
+ * Muted text is slate-600/400 so it clears WCAG AA on every surface.
+ */
+:root {
+  color-scheme: light;
+
+  --canvas: #f8fafc;          /* slate-50 */
+  --surface: #ffffff;
+  --surface-muted: #f1f5f9;   /* slate-100 */
+  --border: #e2e8f0;          /* slate-200 */
+  --border-strong: #cbd5e1;   /* slate-300 */
+  --fg: #0f172a;              /* slate-900 */
+  --fg-muted: #475569;        /* slate-600 */
+  --fg-subtle: #64748b;       /* slate-500, icons and non-text only */
+
+  --primary: #2563eb;         /* blue-600 */
+  --primary-hover: #1d4ed8;   /* blue-700 */
+  --primary-fg: #ffffff;
+  --link: #1d4ed8;
+  --ring: #3b82f6;
+
+  --sidebar: #0f172a;         /* slate-900 */
+  --sidebar-fg: #cbd5e1;      /* slate-300 */
+  --sidebar-fg-active: #ffffff;
+  --sidebar-hover: #1e293b;   /* slate-800 */
+  --sidebar-border: #1e293b;
+
+  /* Semantic colors: meaning only (status, diff, risk, provenance). */
+  --success-bg: #ecfdf5; --success-fg: #047857; --success-border: #a7f3d0;
+  --warning-bg: #fffbeb; --warning-fg: #b45309; --warning-border: #fde68a;
+  --error-bg: #fff1f2;   --error-fg: #be123c;   --error-border: #fecdd3;
+  --ai-bg: #f5f3ff;      --ai-fg: #6d28d9;      --ai-border: #ddd6fe;
+  --source-bg: #f0f9ff;  --source-fg: #0369a1;  --source-border: #bae6fd;
+
+  --shadow-overlay: 0 16px 48px -12px rgb(15 23 42 / 0.25), 0 0 0 1px rgb(15 23 42 / 0.06);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --canvas: #020617;          /* slate-950 */
+  --surface: #0f172a;         /* slate-900 */
+  --surface-muted: #1e293b;   /* slate-800 */
+  --border: #1e293b;
+  --border-strong: #334155;   /* slate-700 */
+  --fg: #f1f5f9;              /* slate-100 */
+  --fg-muted: #94a3b8;        /* slate-400 */
+  --fg-subtle: #64748b;
+
+  --primary: #2563eb;         /* stays blue-600 so white text keeps AA contrast */
+  --primary-hover: #3b82f6;
+  --primary-fg: #ffffff;
+  --link: #60a5fa;            /* blue-400 */
+  --ring: #60a5fa;
+
+  --sidebar: #020617;
+  --sidebar-fg: #94a3b8;
+  --sidebar-fg-active: #f8fafc;
+  --sidebar-hover: #0f172a;
+  --sidebar-border: #1e293b;
+
+  --success-bg: #022c22; --success-fg: #6ee7b7; --success-border: #065f46;
+  --warning-bg: #2a1a05; --warning-fg: #fcd34d; --warning-border: #78350f;
+  --error-bg: #2a0a12;   --error-fg: #fda4af;   --error-border: #881337;
+  --ai-bg: #1e1339;      --ai-fg: #c4b5fd;      --ai-border: #4c1d95;
+  --source-bg: #04202f;  --source-fg: #7dd3fc;  --source-border: #075985;
+
+  --shadow-overlay: 0 16px 48px -12px rgb(0 0 0 / 0.6), 0 0 0 1px rgb(255 255 255 / 0.06);
+}
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-fg: var(--primary-fg);
+  --color-link: var(--link);
+  --color-ring: var(--ring);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-fg: var(--sidebar-fg);
+  --color-sidebar-fg-active: var(--sidebar-fg-active);
+  --color-sidebar-hover: var(--sidebar-hover);
+  --color-sidebar-border: var(--sidebar-border);
+
+  --color-success-bg: var(--success-bg); --color-success-fg: var(--success-fg); --color-success-border: var(--success-border);
+  --color-warning-bg: var(--warning-bg); --color-warning-fg: var(--warning-fg); --color-warning-border: var(--warning-border);
+  --color-error-bg: var(--error-bg);     --color-error-fg: var(--error-fg);     --color-error-border: var(--error-border);
+  --color-ai-bg: var(--ai-bg);           --color-ai-fg: var(--ai-fg);           --color-ai-border: var(--ai-border);
+  --color-source-bg: var(--source-bg);   --color-source-fg: var(--source-fg);   --color-source-border: var(--source-border);
+
+  --shadow-overlay: var(--shadow-overlay);
+
+  --animate-fade-in: fade-in 150ms ease-out;
+  --animate-pop-in: pop-in 180ms ease-out;
+  --animate-slide-in-left: slide-in-left 200ms ease-out;
+  --animate-slide-in-right: slide-in-right 200ms ease-out;
+
+  @keyframes fade-in { from { opacity: 0; } }
+  @keyframes pop-in { from { opacity: 0; transform: translateY(-4px) scale(0.98); } }
+  @keyframes slide-in-left { from { transform: translateX(-100%); } }
+  @keyframes slide-in-right { from { transform: translateX(100%); } }
+}
+
+@layer base {
+  body {
+    background: var(--canvas);
+    color: var(--fg);
+    font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  }
+
+  /* Figures: Geist Mono, tabular, so columns of numbers align. */
+  .num {
+    font-family: var(--font-geist-mono), ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  kbd {
+    font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

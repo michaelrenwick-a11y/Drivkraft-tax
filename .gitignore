@@ -1,0 +1,29 @@
+# Upstream checkouts and binaries (fetched by scripts/bootstrap.sh)
+vendor/
+
+# Runtime data (synthetic cases, SQLite, artifacts)
+data/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# Node / Next.js
+node_modules/
+web/.next/
+web/out/
+web/next-env.d.ts
+*.tsbuildinfo
+
+# Secrets and local config
+.env
+.env.*
+!.env.example
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/

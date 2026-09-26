@@ -87,3 +87,13 @@ Goldens: `server/tests/golden/{proof,synthetic,bench-82}.bridge.json`. `bench-82
 - `box20_sstb` and `box20_ubia` are unused. There's no 8995-A path above the threshold.
 - Box 16 fields follow the pre-2021 layout. Propose a Box 21 + K-3 model.
 - No Box 15 credit routing and no Box 20 routing beyond Code Z.
+
+### MeF export (found in Phase 8, 2026-09-26)
+
+- `taxpayer_prior_year_agi` is read into the filer identity but never written as `PrimaryPriorYearAGIAmt`, so a self-select PIN can't be verified. The dry run adds the element to the signed XML itself.
+- `return validate` evaluates every rule, including rules for forms the return doesn't contain (50 rejects on one case, where `return export` counts 10). Scope validation to the forms present.
+- IND-082 is implemented as `OwedAmt == RefundAmt`, so every balance-due return fails it.
+- Schedule A is emitted even when the standard deduction wins, which trips F1040-021-03.
+- Form 8960 is emitted without its totals (F8960-007/008-01/010) and without `FilingThresholdAmt` (F8960-023).
+- F1040-018-01 (ordinary dividends vs. Schedule B) fails even when both carry the same amount.
+- A W-2 without employer EIN or address stops the whole export with a plain-text error (one field at a time), not a rule finding.

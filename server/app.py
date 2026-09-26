@@ -22,10 +22,11 @@ from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import TypeAdapter, ValidationError
 from starlette.concurrency import run_in_threadpool
 
-from . import chat, demo, store
+from . import chat, demo, efile, store
 from .errors import ToolFailure
 from .tools import REGISTRY, ToolSpec, channel, load_all
 from .tools import cases as case_tools
+from .tools import efile as efile_tools
 from .tools import k1 as k1_tools
 from .tools import notes as note_tools
 from .tools import outputs as output_tools
@@ -47,6 +48,8 @@ Meeting notes: add_note (or sample="rivera-planning"), then analyze_meeting turn
 (document requests, scenarios, research questions, a follow-up draft) that a person accepts in the Inbox.
 Outputs: export_workpaper (Excel; yellow cells are editable), import_workpaper (a changeset of changed cells,
 conflicts marked; nothing applied yet), apply_changeset(accept_ids) after the user decides; build_review_packet (PDF).
+E-file (dry run, never sent to the IRS): efile_export → efile_approve → efile_sign (the taxpayer's PIN and
+prior-year AGI) → efile_submit → efile_status. Rejects come back with the field to fix and a link.
 Every response carries sources[]; cite them (e.g. "Box 13 A · Copperleaf")."""
 
 
@@ -284,6 +287,15 @@ def build_http():
                  else "application/pdf")
         inline = inline and o["kind"] == "packet"     # ?inline=1 opens a packet in the browser's PDF viewer
         return FileResponse(path, media_type=media, filename=output_tools.filename(o),
+                            content_disposition_type="inline" if inline else "attachment")
+
+    @app.get("/api/filings/{filing_id}/xml")
+    def download_filing_xml(filing_id: str, inline: bool = False):
+        f = efile_tools.require_filing(filing_id)
+        path = efile.xml_path(f)
+        if not f["xml_file"] or not path.exists():
+            raise ToolFailure("file_missing", "This submission has no XML", "Export it again.", status=404)
+        return FileResponse(path, media_type="application/xml", filename=f"mef-submission-{f['number']}.xml",
                             content_disposition_type="inline" if inline else "attachment")
 
     app.router.routes.extend(r for r in mcp_app.routes)

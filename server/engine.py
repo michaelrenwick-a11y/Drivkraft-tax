@@ -109,3 +109,26 @@ class Return:
 
     def get(self) -> dict:
         return _run(["return", "get", "--returnId", self.id], self.workdir)
+
+    def validate(self) -> dict:
+        """OpenTax's MeF business-rule check. It evaluates every rule it knows, including
+        rules for forms this return doesn't have; export_mef says which ones apply."""
+        return _run(["return", "validate", "--returnId", self.id], self.workdir)
+
+    def export_mef(self) -> tuple[str, list[str]]:
+        """The return as MeF XML, plus the reject-level rule numbers the export flagged.
+        Exported with --force so a dry run can show the rejects instead of stopping."""
+        if not OPENTAX_BIN.exists():
+            raise EngineError("opentax binary not found", fix_hint="Run scripts/bootstrap.sh")
+        try:
+            r = subprocess.run([str(OPENTAX_BIN), "return", "export", "--returnId", self.id, "--type", "mef", "--force"],
+                               cwd=self.workdir, capture_output=True, text=True, timeout=TIMEOUT_S)
+        except subprocess.TimeoutExpired as exc:
+            raise EngineError("opentax return export timed out", fix_hint="Retry") from exc
+        if r.returncode or not r.stdout.lstrip().startswith("<"):
+            raise EngineError("opentax return export failed", detail=r.stderr.strip(),
+                              fix_hint="See detail for the engine's message")
+        return r.stdout.strip(), _EXPORT_RULE.findall(r.stderr)
+
+
+_EXPORT_RULE = re.compile(r"^\s+\[([A-Z0-9-]+)\]", re.M)

@@ -523,3 +523,59 @@ export type OutputsListing = {
   packets: OutputFile[];
   changesets: Omit<Changeset, "items">[];
 };
+
+/* E-file dry run (server/tools/efile.py) */
+export type FilingState = "ready" | "approved" | "signed" | "queued" | "transmitted" | "accepted" | "rejected" | "void";
+export type FixLink = { label: string; href: string };
+export type PreCheck = { code: string; message: string; fix?: FixLink | null; fix_hint?: string };
+export type ValidatorFinding = { rule: string; severity: string; category: string; form: string; message: string };
+export type FilerInfo = { first_name: string; last_name: string; ssn_masked: string; name_control: string; address: string };
+export type EfileReject = {
+  rule: string;
+  severity: string;
+  message: string;
+  detail: string;
+  field: string | null;
+  fix: FixLink | null;
+};
+export type Filing = {
+  id: string;
+  case_id: string;
+  number: number;
+  status: FilingState;
+  stale: boolean;
+  next_step: string;
+  sha256: string;
+  hash_locked: boolean;
+  xml_url: string | null;
+  xml_bytes: number | null;
+  filer: FilerInfo;
+  checks: {
+    blocking: PreCheck[];
+    warnings: PreCheck[];
+    validator: Record<"transmitter" | "preparer" | "engine", ValidatorFinding[]>;
+    notes: Record<"transmitter" | "preparer" | "engine", string>;
+  };
+  signature: { pin_masked: string; prior_year_agi: number; form: string; signed_at: string; sha256: string } | null;
+  submission: {
+    transmitter: string;
+    submission_id: string;
+    manifest: Record<string, string>;
+    queued_at: string;
+    transmitted_at: string;
+    ack_at: string;
+    result: "accepted" | "rejected" | null;
+    rejects: EfileReject[];
+  } | null;
+  timeline: { status: FilingState; at: string; detail: string }[];
+  created: string;
+  updated: string;
+};
+export type EfileStatus = {
+  case_id: string;
+  read_only: boolean;
+  filings: Filing[];
+  current: Filing | null;
+  filer: FilerInfo | null;
+  efile_database: { ssn_masked: string; name_control: string; prior_year_agi: number; enrolled: string; note: string } | null;
+};

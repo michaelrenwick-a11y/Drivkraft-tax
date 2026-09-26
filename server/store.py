@@ -144,6 +144,29 @@ CREATE TABLE IF NOT EXISTS changesets (
   created TEXT NOT NULL,
   resolved TEXT
 );
+CREATE TABLE IF NOT EXISTS filings (
+  id TEXT PRIMARY KEY,
+  case_id TEXT NOT NULL REFERENCES cases(id),
+  number INTEGER NOT NULL,         -- per case: submission 1, 2…
+  status TEXT NOT NULL,            -- ready | approved | signed | queued | transmitted | accepted | rejected | void
+  fingerprint TEXT NOT NULL,       -- the calculation's form set when exported (stale once it changes)
+  xml_file TEXT NOT NULL,          -- path under the case folder (the signed XML once signed)
+  sha256 TEXT NOT NULL,            -- of xml_file; locked at signing
+  filer TEXT NOT NULL,             -- JSON: name, masked SSN, name control
+  checks TEXT NOT NULL,            -- JSON: pre-checks and OpenTax validator findings (server/efile.py)
+  signature TEXT,                  -- JSON: Form 8879 (masked PIN, prior-year AGI, signed_at)
+  submission TEXT,                 -- JSON: FakeTransmitter manifest, acknowledgement and rejects
+  timeline TEXT NOT NULL,          -- JSON: [{status, at, detail}]
+  created TEXT NOT NULL,
+  updated TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS efile_db (
+  case_id TEXT PRIMARY KEY REFERENCES cases(id),   -- the fake IRS e-File database, one synthetic taxpayer per case
+  ssn TEXT NOT NULL,
+  name_control TEXT NOT NULL,
+  prior_year_agi INTEGER NOT NULL,
+  enrolled TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS events (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   tool TEXT NOT NULL,
@@ -225,7 +248,8 @@ def _row(r: sqlite3.Row | None) -> dict | None:
         return None
     d = dict(r)
     for k in ("progress", "acknowledged", "old_value", "new_value", "data", "changes", "citations", "steps",
-              "payload", "result", "attendees", "segments", "analysis", "meta", "items", "warnings"):
+              "payload", "result", "attendees", "segments", "analysis", "meta", "items", "warnings",
+              "filer", "checks", "signature", "submission", "timeline"):
         if k in d and isinstance(d[k], str):
             d[k] = json.loads(d[k])
     if "cached" in d:
@@ -547,11 +571,58 @@ def update_changeset(changeset_id: str, **fields: Any) -> None:
         db.execute(f"UPDATE changesets SET {cols} WHERE id = :_id", {**fields, "_id": changeset_id})
 
 
+_FILING_JSON = ("filer", "checks", "signature", "submission", "timeline")
+
+
+def insert_filing(f: dict) -> dict:
+    row = {"signature": None, "submission": None, "created": now(), "updated": now(), **f}
+    with connect() as db:
+        row["number"] = db.execute("SELECT COALESCE(MAX(number), 0) + 1 FROM filings WHERE case_id = ?",
+                                   (row["case_id"],)).fetchone()[0]
+        db.execute("INSERT INTO filings (id, case_id, number, status, fingerprint, xml_file, sha256, filer, checks,"
+                   " signature, submission, timeline, created, updated) VALUES (:id, :case_id, :number, :status,"
+                   " :fingerprint, :xml_file, :sha256, :filer, :checks, :signature, :submission, :timeline, :created,"
+                   " :updated)", {**row, **{k: json.dumps(row[k]) for k in _FILING_JSON}})
+    return row
+
+
+def get_filing(filing_id: str) -> dict | None:
+    with connect() as db:
+        return _row(db.execute("SELECT * FROM filings WHERE id = ?", (filing_id,)).fetchone())
+
+
+def list_filings(case_id: str) -> list[dict]:
+    with connect() as db:
+        return [_row(r) for r in db.execute("SELECT * FROM filings WHERE case_id = ? ORDER BY number DESC", (case_id,))]
+
+
+def update_filing(filing_id: str, **fields: Any) -> None:
+    for k in _FILING_JSON:
+        if k in fields:
+            fields[k] = json.dumps(fields[k])
+    fields["updated"] = now()
+    cols = ", ".join(f"{k} = :{k}" for k in fields)
+    with connect() as db:
+        db.execute(f"UPDATE filings SET {cols} WHERE id = :_id", {**fields, "_id": filing_id})
+
+
+def get_efile_record(case_id: str) -> dict | None:
+    with connect() as db:
+        return _row(db.execute("SELECT * FROM efile_db WHERE case_id = ?", (case_id,)).fetchone())
+
+
+def enroll_efile_record(case_id: str, ssn: str, name_control: str, prior_year_agi: int) -> dict:
+    with connect() as db:
+        db.execute("INSERT OR IGNORE INTO efile_db (case_id, ssn, name_control, prior_year_agi, enrolled)"
+                   " VALUES (?, ?, ?, ?, ?)", (case_id, ssn, name_control, prior_year_agi, now()))
+    return get_efile_record(case_id)
+
+
 def reset() -> None:
     """Delete every case, document, edit, input, scenario, note and event, and the case folders.
     The caller re-seeds the reference cases."""
     with connect() as db:
-        for table in ("changesets", "outputs", "checklist", "notes", "research", "proposals", "edits", "inputs", "scenarios", "documents", "cases", "events"):
+        for table in ("filings", "efile_db", "changesets", "outputs", "checklist", "notes", "research", "proposals", "edits", "inputs", "scenarios", "documents", "cases", "events"):
             db.execute(f"DELETE FROM {table}")
     shutil.rmtree(root() / "cases", ignore_errors=True)
 
@@ -563,3 +634,8 @@ def log_event(tool: str, transport: str, ms: float, ok: bool, error_code: str | 
                        (tool, transport, round(ms, 1), int(ok), error_code, now()))
     except sqlite3.Error:
         pass   # the event log must never break a tool call
+
+
+def update_input(input_id: int, data: dict) -> None:
+    with connect() as db:
+        db.execute("UPDATE inputs SET data = ? WHERE id = ?", (json.dumps(data), input_id))

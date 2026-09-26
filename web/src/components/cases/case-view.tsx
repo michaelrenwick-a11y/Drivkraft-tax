@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, BookOpen, FolderDown, Calculator, Check, ChevronLeft, Clock, FileCode2, FilePlus2, FileText, Lock, NotebookPen } from "lucide-react";
+import { ArrowRight, BookOpen, FolderDown, Calculator, Check, ChevronLeft, Clock, FileCode2, FilePlus2, FileText, Lock, NotebookPen, Send } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -114,6 +114,12 @@ export function CaseView({ caseId, openAdd }: { caseId: string; openAdd: boolean
             <FolderDown className="size-4" aria-hidden />
             Outputs
           </Button>
+          {!c.read_only && anyApproved && (
+            <Button variant="ghost" onClick={() => router.push(`/cases/${caseId}/efile`)}>
+              <Send className="size-4" aria-hidden />
+              E-file
+            </Button>
+          )}
           {!c.read_only && documents.length > 0 && (
             <Button onClick={() => setAddOpen(true)}>
               <FilePlus2 className="size-4" aria-hidden />
@@ -236,8 +242,8 @@ function Checklist({ caseId, readOnly, onChanged }: { caseId: string; readOnly: 
     }
   };
   return (
-    <section aria-labelledby="checklist" className="mt-8">
-      <h2 id="checklist" className="text-sm font-semibold text-fg">
+    <section id="checklist" aria-labelledby="checklist-h" className="mt-8 scroll-mt-6">
+      <h2 id="checklist-h" className="text-sm font-semibold text-fg">
         Requested documents <span className="font-normal text-fg-muted">· {data.open} open</span>
       </h2>
       <ul className="mt-3 divide-y divide-border rounded-lg border border-border bg-surface shadow-sm">

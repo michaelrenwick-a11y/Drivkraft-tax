@@ -11,13 +11,16 @@ CASE="$ROOT/vendor/opentax/benchmark/cases/f1040/2025/93-mfj-w2-k1"
 OUT="$ROOT/data/smoke/$(date +%Y%m%dT%H%M%S)"
 mkdir -p "$OUT"
 
-pass=0; fail=0; results=()
+pass=0; fail=0; results=(); json=()
+STARTED="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 check() {
   local name="$1"; shift
+  local t0=$SECONDS
   if "$@" >"$OUT/$name.log" 2>&1; then
-    results+=("PASS  $name"); pass=$((pass + 1))
+    results+=("PASS  $name"); pass=$((pass + 1)); json+=("{\"name\":\"$name\",\"ok\":true,\"s\":$((SECONDS - t0))}")
   else
     results+=("FAIL  $name  (see ${OUT#$ROOT/}/$name.log)"); fail=$((fail + 1))
+    json+=("{\"name\":\"$name\",\"ok\":false,\"s\":$((SECONDS - t0))}")
   fi
 }
 
@@ -74,4 +77,7 @@ check server-tests "$PY" -m pytest -q "$ROOT/server/tests"
 printf '\nSmoke results (%s)\n' "${OUT#$ROOT/}"
 printf '  %s\n' "${results[@]}"
 printf '%d passed, %d failed\n' "$pass" "$fail"
+# Read by the operator page (server/operator.py).
+printf '{"started":"%s","finished":"%s","passed":%d,"failed":%d,"checks":[%s]}\n' "$STARTED" \
+  "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$pass" "$fail" "$(IFS=,; echo "${json[*]}")" > "$OUT/results.json"
 exit $((fail > 0))

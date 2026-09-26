@@ -11,6 +11,9 @@
 :root {
   color-scheme: light;
 
+  /* Operator charts: validated as a pair per theme (dataviz validate_palette.js). */
+  --chart-calls: #2563eb;     --chart-errors: #be123c;
+
   --canvas: #f8fafc;          /* slate-50 */
   --surface: #ffffff;
   --surface-muted: #f1f5f9;   /* slate-100 */
@@ -44,6 +47,8 @@
 
 [data-theme="dark"] {
   color-scheme: dark;
+
+  --chart-calls: #3b82f6;     --chart-errors: #f43f5e;
 
   --canvas: #020617;          /* slate-950 */
   --surface: #0f172a;         /* slate-900 */

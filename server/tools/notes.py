@@ -273,6 +273,7 @@ def analyze_meeting(note_id: str, refresh: bool = False) -> dict:
                               status=501)
         live = notes.analyze_live(note, case, store.list_documents(case["id"]))
         raw = {**live, "cached": False, "model": live.pop("_model", None), "usage": live.pop("_usage", None)}
+        store.log_ai_usage("meeting_analysis", raw["model"], raw["usage"] or {}, note_id)
 
     raw["skipped_scenarios"] = [sc["name"] for sc in raw.get("scenarios") or []
                                 if not _scenario_changes(case["id"], sc)]

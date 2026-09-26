@@ -285,7 +285,8 @@ async def run_turn(mcp, message: str, conversation_id: str | None, path: str | N
     msgs.append({"role": "user", "content": [{"type": "text", "text": page_context(path)},
                                              {"type": "text", "text": message}]})
     t0 = time.perf_counter()
-    ok, err_code, usage = True, None, {"input": 0, "output": 0, "cache_read": 0}
+    ok, err_code, usage = True, None, {"input": 0, "output": 0, "cache_read": 0, "cache_write": 0}
+    served_by = model()
     try:
         for _step in range(MAX_STEPS):
             async with client.beta.messages.stream(
@@ -312,6 +313,8 @@ async def run_turn(mcp, message: str, conversation_id: str | None, path: str | N
             usage["input"] += u.input_tokens or 0
             usage["output"] += u.output_tokens or 0
             usage["cache_read"] += getattr(u, "cache_read_input_tokens", 0) or 0
+            usage["cache_write"] += getattr(u, "cache_creation_input_tokens", 0) or 0
+            served_by = getattr(final, "model", None) or served_by
             msgs.append({"role": "assistant", "content": final.content})
             if final.stop_reason == "refusal":
                 conv["messages"] = msgs
@@ -345,6 +348,8 @@ async def run_turn(mcp, message: str, conversation_id: str | None, path: str | N
         yield _sse("error", err)
     finally:
         store.log_event("chat", "chat", (time.perf_counter() - t0) * 1000, ok, err_code)
+        if any(usage.values()):
+            store.log_ai_usage("chat", served_by, usage, conv["id"], ok)
     yield _sse("done", {"usage": usage, "ms": round((time.perf_counter() - t0) * 1000)})
 
 

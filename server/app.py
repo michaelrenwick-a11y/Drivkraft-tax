@@ -50,6 +50,7 @@ Outputs: export_workpaper (Excel; yellow cells are editable), import_workpaper (
 conflicts marked; nothing applied yet), apply_changeset(accept_ids) after the user decides; build_review_packet (PDF).
 E-file (dry run, never sent to the IRS): efile_export → efile_approve → efile_sign (the taxpayer's PIN and
 prior-year AGI) → efile_submit → efile_status. Rejects come back with the field to fix and a link.
+get_operator_stats: app-wide activity, latency, estimated AI/Bizora spend and upstream health.
 Every response carries sources[]; cite them (e.g. "Box 13 A · Copperleaf")."""
 
 

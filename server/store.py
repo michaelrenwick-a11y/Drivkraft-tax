@@ -167,6 +167,19 @@ CREATE TABLE IF NOT EXISTS efile_db (
   prior_year_agi INTEGER NOT NULL,
   enrolled TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS ai_usage (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  kind TEXT NOT NULL,              -- chat | meeting_analysis
+  model TEXT,
+  input_tokens INTEGER NOT NULL,
+  output_tokens INTEGER NOT NULL,
+  cache_read_tokens INTEGER NOT NULL DEFAULT 0,
+  cache_write_tokens INTEGER NOT NULL DEFAULT 0,
+  cost_usd REAL,                   -- estimate (server/pricing.py); null for an unknown model
+  ref TEXT,                        -- conversation id or note id
+  ok INTEGER NOT NULL,
+  created TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS events (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   tool TEXT NOT NULL,
@@ -620,11 +633,29 @@ def enroll_efile_record(case_id: str, ssn: str, name_control: str, prior_year_ag
 
 def reset() -> None:
     """Delete every case, document, edit, input, scenario, note and event, and the case folders.
-    The caller re-seeds the reference cases."""
+    The caller re-seeds the reference cases. ai_usage is kept: it's the spend record."""
     with connect() as db:
         for table in ("filings", "efile_db", "changesets", "outputs", "checklist", "notes", "research", "proposals", "edits", "inputs", "scenarios", "documents", "cases", "events"):
             db.execute(f"DELETE FROM {table}")
     shutil.rmtree(root() / "cases", ignore_errors=True)
+
+
+def log_ai_usage(kind: str, model: str | None, usage: dict, ref: str | None = None, ok: bool = True) -> None:
+    from .pricing import cost_usd
+    try:
+        with connect() as db:
+            db.execute("INSERT INTO ai_usage (kind, model, input_tokens, output_tokens, cache_read_tokens,"
+                       " cache_write_tokens, cost_usd, ref, ok, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                       (kind, model, usage.get("input", 0), usage.get("output", 0), usage.get("cache_read", 0),
+                        usage.get("cache_write", 0), cost_usd(model, usage), ref, int(ok), now()))
+    except sqlite3.Error:
+        pass   # like the event log, usage logging must never break a call
+
+
+def query(sql: str, args: tuple = ()) -> list[dict]:
+    """Read-only aggregate queries for the operator page."""
+    with connect() as db:
+        return [dict(r) for r in db.execute(sql, args)]
 
 
 def log_event(tool: str, transport: str, ms: float, ok: bool, error_code: str | None = None) -> None:

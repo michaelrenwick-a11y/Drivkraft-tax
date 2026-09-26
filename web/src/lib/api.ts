@@ -579,3 +579,72 @@ export type EfileStatus = {
   filer: FilerInfo | null;
   efile_database: { ssn_masked: string; name_control: string; prior_year_agi: number; enrolled: string; note: string } | null;
 };
+
+/* Operator view (server/operator.py) */
+export type Count = { count: number };
+export type BoxCount = { path: string; box: string; count: number };
+export type ToolStat = {
+  tool: string;
+  calls: number;
+  errors: number;
+  error_rate: number | null;
+  p50_ms: number | null;
+  p95_ms: number | null;
+  transports: Record<string, number>;
+  last: string;
+};
+export type OperatorStats = {
+  generated: string;
+  cases: { total: number; reference: number; by_status: ({ status: string } & Count)[] };
+  k1s: {
+    total: number;
+    by_status: ({ status: string } & Count)[];
+    by_source: Record<string, number>;
+    edits: number;
+    pdf_extraction_s: { count: number; p50: number | null; max: number | null };
+  };
+  exceptions: { flags: ({ code: string } & Count)[]; errors: ({ code: string } & Count)[] };
+  bridge: { unsupported: BoxCount[]; not_in_calculation: BoxCount[] };
+  tool_calls: {
+    total: number;
+    errors: number;
+    p50_ms: number | null;
+    p95_ms: number | null;
+    by_transport: Record<string, number>;
+    daily: { day: string; calls: number; errors: number }[];
+    tools: ToolStat[];
+    recent_errors: { tool: string; transport: string; code: string | null; at: string }[];
+  };
+  usage: {
+    anthropic: {
+      total_usd: number;
+      month_usd: number;
+      month: string;
+      rows: { kind: string; model: string | null; calls: number; input: number; output: number; cache_read: number; cache_write: number; cost_usd: number; unpriced: number }[];
+      cached_meeting_analyses: number;
+      prices_as_of: string;
+      note: string;
+    };
+    bizora: { live: number; cached: number; cost_usd: number; by_mode: { mode: string; cached: boolean; count: number; cost_usd: number }[] };
+    total_usd: number;
+    keys: { anthropic: boolean; bizora: boolean };
+  };
+  proposals: {
+    by_kind: { kind: string; pending: number; accepted: number; rejected: number; accept_rate: number | null }[];
+    accept_rate: number | null;
+    by_origin: Record<string, number>;
+  };
+  efile: {
+    submissions: number;
+    by_status: ({ status: string } & Count)[];
+    acceptance_rate: number | null;
+    rejects: ({ rule: string } & Count)[];
+    engine_gaps: ({ rule: string } & Count)[];
+  };
+  upstream: {
+    components: { name: string; pinned: string | null; actual: string | null; ok: boolean; license: string }[];
+    packages: { name: string; version: string | null }[];
+  };
+  smoke: { started: string; finished: string; passed: number; failed: number; checks: { name: string; ok: boolean; s: number }[]; runs: number; log_dir: string } | null;
+  visitors: { tracked: boolean; note: string };
+};

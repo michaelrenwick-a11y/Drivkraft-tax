@@ -214,3 +214,14 @@ def test_chat_without_credentials_says_how_to_configure(monkeypatch):
 
     frames = b"".join(asyncio.run(go())).decode()
     assert "event: error" in frames and "not_configured" in frames and ".env" in frames
+
+
+def test_chat_turn_logs_token_usage_and_cost():
+    before = store.query("SELECT COUNT(*) AS n FROM ai_usage WHERE kind = 'chat'")[0]["n"]
+    client = FakeClient([turn(tool_use("u1", "list_cases", {}), stop="tool_use"), turn(NS(type="text", text="Done."))])
+    events = run(client, "List cases")
+    rows = store.query("SELECT * FROM ai_usage WHERE kind = 'chat' ORDER BY id")
+    assert len(rows) == before + 1
+    r = rows[-1]
+    assert (r["input_tokens"], r["output_tokens"], r["ok"]) == (20, 10, 1) and r["ref"] == events[0][1]["id"]
+    assert r["model"] == chat.model() and r["cost_usd"] > 0

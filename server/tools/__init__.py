@@ -35,5 +35,5 @@ def tool(kind: str, title: str, method: str, route: str):
 
 
 def load_all() -> dict[str, ToolSpec]:
-    from . import cases, efile, k1, notes, outputs, proposals, research, returns  # noqa: F401  (registers on import)
+    from . import cases, efile, k1, notes, operator, outputs, proposals, research, returns  # noqa: F401  (registers on import)
     return REGISTRY

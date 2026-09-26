@@ -297,3 +297,27 @@ export const FILING_STATUS_LABELS: Record<FilingStatus, string> = {
   hoh: "Head of household",
   qss: "Qualifying surviving spouse",
 };
+
+/* ── Proposals (Phase 4) ─────────────────────────────────────────────── */
+
+export type ProposalStatus = "pending" | "accepted" | "rejected";
+
+export type Proposal = {
+  id: string;
+  case_id: string;
+  doc_id: string;
+  kind: "k1_edit";
+  path: string;
+  label: string;
+  partnership: string | null;
+  old_value: number | string | boolean | null;
+  new_value: number | string | boolean | null;
+  rationale: string;
+  citations: (Source & { href?: string | null })[];
+  origin: "chat" | "mcp" | "http";
+  status: ProposalStatus;
+  edit_id: number | null;
+  created: string;
+  resolved: string | null;
+  note: string | null;
+};

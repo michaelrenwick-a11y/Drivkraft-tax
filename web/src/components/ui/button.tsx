@@ -83,9 +83,9 @@ export function ShortcutHint({ keys, className }: { keys: string; className?: st
   );
 }
 
-export function Kbd({ children }: { children: ReactNode }) {
+export function Kbd({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <kbd className="inline-flex h-5 min-w-5 items-center justify-center rounded border border-border-strong bg-surface px-1 text-[11px] font-medium text-fg-muted shadow-[0_1px_0_var(--border-strong)]">
+    <kbd className={cn("inline-flex h-5 min-w-5 items-center justify-center rounded border border-border-strong bg-surface px-1 text-[11px] font-medium text-fg-muted shadow-[0_1px_0_var(--border-strong)]", className)}>
       {children}
     </kbd>
   );

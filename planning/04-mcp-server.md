@@ -33,7 +33,7 @@ Implementation notes (Phase 1.5):
 
 ## Tool catalog
 
-Status: every Cases, Source docs and K-1 / OTD tool, plus `calculate_return`, is built (Phases 1.5–2), and so are `list_k1_samples` and `acknowledge_flag`. The rest arrive in their phases. `intake_k1` takes `sample` (a bundled sample id), not a PDF upload.
+Status: every Cases, Source docs and K-1 / OTD tool, plus the Engine tools (Phase 3), is built, and so are `list_k1_samples` and `acknowledge_flag`. Phase 4 added `propose_edit`, `list_proposals`, `accept_proposal`, `reject_proposal` and `undo_proposal` (proposals take a K-1 `doc_id` + OTD `path`; `citations` are `sources[]` refs). The rest arrive in their phases. `intake_k1` takes `sample` (a bundled sample id), not a PDF upload.
 
 Legend: **R** read-only · **W** writes to the case · **$** costs money · **P** creates a *proposal* (a human must accept it).
 

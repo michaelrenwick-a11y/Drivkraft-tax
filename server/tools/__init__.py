@@ -5,10 +5,15 @@ Kinds (planning/04): R read-only · W writes to the case · $ costs money · P p
 """
 from __future__ import annotations
 
+from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import Callable
 
 REGISTRY: dict[str, "ToolSpec"] = {}
+
+# Which client is calling (mcp · http · chat). The web chat sets "chat" around its
+# MCP calls so proposals and the events log can tell it apart from Claude Desktop.
+channel: ContextVar[str] = ContextVar("channel", default="mcp")
 
 
 @dataclass(frozen=True)
@@ -30,5 +35,5 @@ def tool(kind: str, title: str, method: str, route: str):
 
 
 def load_all() -> dict[str, ToolSpec]:
-    from . import cases, k1, returns  # noqa: F401  (registers on import)
+    from . import cases, k1, proposals, returns  # noqa: F401  (registers on import)
     return REGISTRY

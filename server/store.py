@@ -66,6 +66,22 @@ CREATE TABLE IF NOT EXISTS scenarios (
   changes TEXT NOT NULL,           -- JSON: run_scenario changes
   created TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS proposals (
+  id TEXT PRIMARY KEY,
+  case_id TEXT NOT NULL REFERENCES cases(id),
+  doc_id TEXT NOT NULL REFERENCES documents(id),
+  kind TEXT NOT NULL,              -- k1_edit
+  path TEXT NOT NULL,
+  old_value TEXT,                  -- JSON: value when proposed
+  new_value TEXT,                  -- JSON
+  rationale TEXT NOT NULL,
+  citations TEXT NOT NULL DEFAULT '[]',     -- JSON: sources[] the proposal relies on
+  origin TEXT NOT NULL,            -- chat | mcp | http
+  status TEXT NOT NULL,            -- pending | accepted | rejected
+  edit_id INTEGER,                 -- the edit an accept made
+  created TEXT NOT NULL,
+  resolved TEXT
+);
 CREATE TABLE IF NOT EXISTS events (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   tool TEXT NOT NULL,
@@ -131,7 +147,7 @@ def _row(r: sqlite3.Row | None) -> dict | None:
     if r is None:
         return None
     d = dict(r)
-    for k in ("progress", "acknowledged", "old_value", "new_value", "data", "changes"):
+    for k in ("progress", "acknowledged", "old_value", "new_value", "data", "changes", "citations"):
         if k in d and isinstance(d[k], str):
             d[k] = json.loads(d[k])
     if "read_only" in d:
@@ -248,11 +264,44 @@ def delete_scenario(scenario_id: str) -> bool:
         return db.execute("DELETE FROM scenarios WHERE id = ?", (scenario_id,)).rowcount > 0
 
 
+def insert_proposal(p: dict) -> dict:
+    row = {"status": "pending", "edit_id": None, "resolved": None, "created": now(), **p}
+    enc = {**row, "old_value": json.dumps(row["old_value"]), "new_value": json.dumps(row["new_value"]),
+           "citations": json.dumps(row["citations"])}
+    with connect() as db:
+        db.execute("INSERT INTO proposals (id, case_id, doc_id, kind, path, old_value, new_value, rationale, citations,"
+                   " origin, status, edit_id, created, resolved) VALUES (:id, :case_id, :doc_id, :kind, :path,"
+                   " :old_value, :new_value, :rationale, :citations, :origin, :status, :edit_id, :created, :resolved)",
+                   enc)
+    return row
+
+
+def get_proposal(proposal_id: str) -> dict | None:
+    with connect() as db:
+        return _row(db.execute("SELECT * FROM proposals WHERE id = ?", (proposal_id,)).fetchone())
+
+
+def list_proposals(case_id: str | None = None, status: str | None = None) -> list[dict]:
+    sql, args = "SELECT * FROM proposals WHERE 1=1", []
+    if case_id:
+        sql, args = sql + " AND case_id = ?", [*args, case_id]
+    if status:
+        sql, args = sql + " AND status = ?", [*args, status]
+    with connect() as db:
+        return [_row(r) for r in db.execute(sql + " ORDER BY created DESC, rowid DESC", args)]
+
+
+def update_proposal(proposal_id: str, **fields: Any) -> None:
+    cols = ", ".join(f"{k} = :{k}" for k in fields)
+    with connect() as db:
+        db.execute(f"UPDATE proposals SET {cols} WHERE id = :_id", {**fields, "_id": proposal_id})
+
+
 def reset() -> None:
     """Delete every case, document, edit, input, scenario and event, and the case folders.
     The caller re-seeds the reference cases."""
     with connect() as db:
-        for table in ("edits", "inputs", "scenarios", "documents", "cases", "events"):
+        for table in ("proposals", "edits", "inputs", "scenarios", "documents", "cases", "events"):
             db.execute(f"DELETE FROM {table}")
     shutil.rmtree(root() / "cases", ignore_errors=True)
 

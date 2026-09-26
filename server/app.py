@@ -18,13 +18,13 @@ import typing
 from typing import Any
 
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import TypeAdapter, ValidationError
 from starlette.concurrency import run_in_threadpool
 
-from . import demo, store
+from . import chat, demo, store
 from .errors import ToolFailure
-from .tools import REGISTRY, ToolSpec, load_all
+from .tools import REGISTRY, ToolSpec, channel, load_all
 from .tools import cases as case_tools
 from .tools import k1 as k1_tools
 
@@ -70,7 +70,7 @@ def build_mcp():
             @functools.wraps(spec.fn)
             def handler(**kwargs):
                 try:
-                    return _call(spec, "mcp", kwargs)
+                    return _call(spec, channel.get(), kwargs)
                 except ToolFailure as exc:
                     raise ToolError(json.dumps(exc.to_dict(), ensure_ascii=False)) from exc
             return handler
@@ -174,6 +174,7 @@ def build_http():
                                       status=422)
             if spec.name == "intake_k1" and "wait" not in raw:
                 kwargs["wait"] = False    # the web polls progress instead of holding the request
+            channel.set("http")
             return await run_in_threadpool(_call, spec, "http", kwargs)
 
         handle.__name__ = spec.name
@@ -205,6 +206,27 @@ def build_http():
         await run_in_threadpool(store.reset)
         await run_in_threadpool(demo.seed)
         return {"ok": True, "cases": [c["id"] for c in store.list_cases()]}
+
+    @app.get("/api/chat/status")
+    def chat_status():
+        return chat.status()
+
+    @app.post("/api/chat")
+    async def chat_turn(request: Request):
+        """One chat turn, streamed as server-sent events (server/chat.py)."""
+        try:
+            body = json.loads(await request.body() or b"{}")
+        except json.JSONDecodeError:
+            body = None
+        message = (body or {}).get("message") if isinstance(body, dict) else None
+        if not isinstance(message, str) or not message.strip():
+            raise ToolFailure("message_required", "Send a message", 'POST {"message": "…"}.', status=422)
+        if len(message) > 8000:
+            raise ToolFailure("message_too_long", "Messages are limited to 8,000 characters", "Shorten it.", status=422)
+        ctx = body.get("context") if isinstance(body.get("context"), dict) else {}
+        stream = chat.run_turn(mcp, message.strip(), body.get("conversation_id"), ctx.get("path"))
+        return StreamingResponse(stream, media_type="text/event-stream",
+                                 headers={"Cache-Control": "no-cache, no-transform", "X-Accel-Buffering": "no"})
 
     @app.get("/api/tools")
     def tools():

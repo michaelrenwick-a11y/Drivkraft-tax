@@ -38,6 +38,12 @@ export function K1Review({ caseId, docId, initialPath = null }: { caseId: string
   const [showAll, setShowAll] = useState(false);
   // A return line's "Box 11 A · Greenfield" link lands here with ?box=<path> selected.
   const [selPath, setSelPath] = useState<string | null>(initialPath);
+  // A chat citation can point at another box while this view is open.
+  const [pathParam, setPathParam] = useState(initialPath);
+  if (initialPath !== pathParam) {
+    setPathParam(initialPath);
+    if (initialPath) setSelPath(initialPath);
+  }
   const [editing, setEditing] = useState<Entry | null>(null);
   const [busy, setBusy] = useState(false);
 

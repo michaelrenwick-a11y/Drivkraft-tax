@@ -37,13 +37,19 @@ const HEADLINE: { key: string; label: string }[] = [
 
 type Active = { changes: ScenarioChanges; result: ScenarioResult; name: string | null };
 
-export function ReturnView({ caseId }: { caseId: string }) {
+export function ReturnView({ caseId, initialLine = null }: { caseId: string; initialLine?: string | null }) {
   const toast = useToast();
   const { paletteOpen } = useUI();
   const summary = useApi<CaseSummary>(`/cases/${caseId}`);
   const { data: calc, error, loading, reload } = useApi<ReturnCalc>(`/cases/${caseId}/return`);
   const saved = useApi<{ scenarios: SavedScenario[] }>(`/cases/${caseId}/scenarios`);
-  const [selKey, setSelKey] = useState("line24_total_tax");
+  const [selKey, setSelKey] = useState(initialLine ?? "line24_total_tax");
+  // A chat citation can point at another line while this view is open.
+  const [lineParam, setLineParam] = useState(initialLine);
+  if (initialLine !== lineParam) {
+    setLineParam(initialLine);
+    if (initialLine) setSelKey(initialLine);
+  }
   const [dialog, setDialog] = useState(false);
   const [active, setActive] = useState<Active | null>(null);
   const explain = useApi<LineExplanation>(calc ? `/cases/${caseId}/lines/${selKey}/explain` : null);

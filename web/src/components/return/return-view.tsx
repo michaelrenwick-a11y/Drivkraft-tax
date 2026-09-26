@@ -2,7 +2,7 @@
 
 import { AlertTriangle, ChevronLeft, CircleX, FlaskConical, Info, Play, X } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useUI } from "@/components/providers";
 import { Button, IconButton, Kbd } from "@/components/ui/button";
 import { ErrorState } from "@/components/ui/error-state";
@@ -37,7 +37,15 @@ const HEADLINE: { key: string; label: string }[] = [
 
 type Active = { changes: ScenarioChanges; result: ScenarioResult; name: string | null };
 
-export function ReturnView({ caseId, initialLine = null }: { caseId: string; initialLine?: string | null }) {
+export function ReturnView({
+  caseId,
+  initialLine = null,
+  initialScenario = null,
+}: {
+  caseId: string;
+  initialLine?: string | null;
+  initialScenario?: string | null;
+}) {
   const toast = useToast();
   const { paletteOpen } = useUI();
   const summary = useApi<CaseSummary>(`/cases/${caseId}`);
@@ -80,6 +88,15 @@ export function ReturnView({ caseId, initialLine = null }: { caseId: string; ini
     if (err) toast({ tone: "error", title: `Couldn't run ${s.name}`, body: err });
     else setActive((a) => a && { ...a, name: s.name });
   };
+
+  // ?scenario=<id> (e.g. from an accepted meeting-note proposal) opens that saved scenario once.
+  const openedScenario = useRef<string | null>(null);
+  useEffect(() => {
+    const s = saved.data?.scenarios.find((x) => x.id === initialScenario);
+    if (!calc || !s || openedScenario.current === s.id) return;
+    openedScenario.current = s.id;
+    void runSaved(s);
+  });
 
   const removeSaved = async (s: SavedScenario) => {
     await api(`/scenarios/${s.id}/delete`, { method: "POST" }).catch(() => null);
@@ -259,7 +276,7 @@ function Caveats({ caveats, calc, caseId }: { caveats: Caveat[]; calc: ReturnCal
             <Icon className="mt-0.5 size-4 shrink-0" aria-hidden />
             <div className="min-w-0">
               <p className="font-medium">{cv.message}</p>
-              <p className="mt-0.5 text-xs leading-5 opacity-90">
+              <p className="mt-0.5 text-xs leading-5">
                 {cv.fix_hint}
                 {incomplete.map((k) => (
                   <Link key={k.doc_id} href={`/cases/${caseId}/k1/${k.doc_id}`} className="ml-2 underline underline-offset-2">

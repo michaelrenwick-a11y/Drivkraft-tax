@@ -57,6 +57,8 @@ How to work:
   case_id. In chat it only returns cached answers; if it says live research is needed, tell the user to run
   it on the Research page (it costs money) rather than answering from memory. Summarize the answer briefly,
   citing its research://…/cite/n refs, and mention that the answer was saved.
+- For "what did the client say about X", use search_notes or get_note and cite the note://…#t=… refs.
+  analyze_meeting turns a note into Inbox proposals; say they are proposals waiting for review.
 
 Citations (required):
 - Every tool result has sources[] entries like {"ref": "k1://ref-proof/box/part_iii.box_1", "label": ...}.
@@ -132,6 +134,9 @@ def step_label(name: str, args: dict) -> str:
         "propose_edit": f"Proposing an edit to {where}" if where else "Proposing an edit", "list_proposals": "Checking the Inbox",
         "tax_research": "Researching the tax question", "quote_research": "Checking the research cost",
         "list_research": "Listing saved research", "get_research": "Reading saved research",
+        "list_notes": "Listing meeting notes", "get_note": "Reading the meeting note",
+        "search_notes": f"Searching notes for “{args['query']}”" if args.get("query") else "Searching meeting notes",
+        "analyze_meeting": "Analyzing the meeting", "list_checklist": "Checking requested documents",
     }
     spec = REGISTRY.get(name)
     return labels.get(name) or (spec.title if spec else name)
@@ -143,7 +148,7 @@ def page_context(path: str | None) -> str:
     if not path:
         return "<context>No page context.</context>"
     lines = [f"Page: {path[:200]}"]
-    m = re.match(r"^/cases/([\w-]+)(?:/k1/([\w-]+)|/(return))?", path)
+    m = re.match(r"^/cases/([\w-]+)(?:/k1/([\w-]+)|/(return)|/(notes))?", path)
     if m and (case := store.get_case(m[1])):
         lines.append(f"Case: {case['id']} ({case['name']}, {case['filing_status']}, "
                      f"{'read-only reference' if case['read_only'] else 'editable'})")
@@ -151,6 +156,10 @@ def page_context(path: str | None) -> str:
             lines.append(f"K-1: {doc['id']} ({doc.get('label') or 'unnamed'}, {doc['status']})")
         if m[3]:
             lines.append("Viewing the 1040 calculation")
+        if m[4]:
+            nm = re.search(r"[?&]note=([\w-]+)", path)
+            note = nm and store.get_note(nm[1])
+            lines.append(f"Viewing meeting notes" + (f": {note['id']} ({note['title']})" if note else ""))
     return "<context>\n" + "\n".join(lines) + "\n</context>"
 
 

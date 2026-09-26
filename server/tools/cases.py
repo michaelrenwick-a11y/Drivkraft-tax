@@ -87,7 +87,8 @@ def get_case_summary(case_id: str) -> dict:
     """Status of one case: its K-1s, what each needs next, and the open items.
 
     Open items are the things blocking a ready return: refused K-1s, flags to
-    acknowledge, K-1s awaiting approval. Read-only and free.
+    acknowledge, K-1s awaiting approval, documents requested in meetings and not
+    yet received. Read-only and free.
     """
     from .k1 import doc_out   # local import: k1 imports this module
 
@@ -105,6 +106,9 @@ def get_case_summary(case_id: str) -> dict:
                                "text": f"{name}: review and approve" + (f" ({todo} flag(s) to acknowledge)" if todo else "")})
         elif d["status"] == "failed":
             open_items.append({"doc_id": d["id"], "kind": "failed", "text": f"{name}: extraction failed"})
+    for item in store.list_checklist(case_id):
+        if item["status"] == "open":
+            open_items.append({"checklist_id": item["id"], "kind": "document_request", "text": f"Requested: {item['item']}"})
     return {
         "case": _case_out(case, docs),
         "documents": out_docs,

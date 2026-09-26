@@ -27,6 +27,7 @@ from .errors import ToolFailure
 from .tools import REGISTRY, ToolSpec, channel, load_all
 from .tools import cases as case_tools
 from .tools import k1 as k1_tools
+from .tools import notes as note_tools
 from .tools import research as research_tools
 
 HOST = os.environ.get("DRIVKRAFT_HOST", "127.0.0.1")
@@ -41,6 +42,8 @@ To answer "what on this K-1 isn't in the calculation?", call bridge_k1: every
 calculation_incomplete flag names a box OpenTax can't take, and not_in_calculation lists the amounts.
 For tax-law questions ("how is Box 9b taxed?"), quote_research then tax_research: cached questions are
 free; live Bizora queries cost money, so confirm the price with the user first.
+Meeting notes: add_note (or sample="rivera-planning"), then analyze_meeting turns the note into proposals
+(document requests, scenarios, research questions, a follow-up draft) that a person accepts in the Inbox.
 Every response carries sources[]; cite them (e.g. "Box 13 A · Copperleaf")."""
 
 
@@ -114,6 +117,11 @@ def build_mcp():
                   description="A saved tax research answer with numbered citations to primary authority.")
     def research_resource(research_id: str) -> str:
         return resource(research_tools.get_research, research_id)
+
+    @mcp.resource("note://{note_id}", name="note", mime_type="application/json",
+                  description="A meeting note with timed segments, its analysis and the proposals it made.")
+    def note_resource(note_id: str) -> str:
+        return resource(note_tools.get_note, note_id)
 
     @mcp.prompt(name="review_k1", title="Review a K-1",
                 description="Walk a K-1's errors and flags one by one, with the PDF evidence for each.")

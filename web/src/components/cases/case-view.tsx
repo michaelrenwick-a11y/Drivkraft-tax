@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, BookOpen, Calculator, ChevronLeft, FileCode2, FilePlus2, FileText, Lock } from "lucide-react";
+import { ArrowRight, BookOpen, Calculator, Check, ChevronLeft, Clock, FileCode2, FilePlus2, FileText, Lock, NotebookPen } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -10,7 +10,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
-import { FILING_STATUS_LABELS, useApi, type CaseSummary, type DocSummary } from "@/lib/api";
+import { api, FILING_STATUS_LABELS, useApi, type ApiError, type CaseSummary, type ChecklistItem, type DocSummary } from "@/lib/api";
+import { cn } from "@/lib/cn";
 import { displayName, relativeTime } from "@/lib/format";
 import { AddK1Dialog } from "./add-k1-dialog";
 import { ExtractionProgress } from "./extraction-progress";
@@ -101,6 +102,10 @@ export function CaseView({ caseId, openAdd }: { caseId: string; openAdd: boolean
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Button variant="ghost" onClick={() => router.push(`/cases/${caseId}/notes`)}>
+            <NotebookPen className="size-4" aria-hidden />
+            Notes
+          </Button>
           <Button variant="ghost" onClick={() => router.push(`/research?case=${caseId}`)}>
             <BookOpen className="size-4" aria-hidden />
             Research
@@ -141,6 +146,8 @@ export function CaseView({ caseId, openAdd }: { caseId: string; openAdd: boolean
           </ul>
         </section>
       )}
+
+      <Checklist caseId={caseId} readOnly={c.read_only} onChanged={reload} />
 
       <AddK1Dialog
         caseId={caseId}
@@ -203,6 +210,70 @@ function DocCard({ doc, caseId, readOnly }: { doc: DocSummary; caseId: string; r
         </div>
       )}
     </li>
+  );
+}
+
+/** Documents requested in meetings (accepted doc_request proposals), each linked to its moment. */
+function Checklist({ caseId, readOnly, onChanged }: { caseId: string; readOnly: boolean; onChanged: () => Promise<unknown> | void }) {
+  const toast = useToast();
+  const { data, reload } = useApi<{ items: ChecklistItem[]; open: number }>(`/cases/${caseId}/checklist`);
+  const [busy, setBusy] = useState<string | null>(null);
+  if (!data || data.items.length === 0) return null;
+  const toggle = async (item: ChecklistItem) => {
+    setBusy(item.id);
+    try {
+      await api(`/checklist/${item.id}`, { json: { status: item.status === "open" ? "received" : "open" } });
+      await Promise.all([reload(), onChanged()]);
+    } catch (e) {
+      const err = (e as ApiError).error;
+      toast({ tone: "error", title: err.message, body: err.fix_hint });
+    } finally {
+      setBusy(null);
+    }
+  };
+  return (
+    <section aria-labelledby="checklist" className="mt-8">
+      <h2 id="checklist" className="text-sm font-semibold text-fg">
+        Requested documents <span className="font-normal text-fg-muted">· {data.open} open</span>
+      </h2>
+      <ul className="mt-3 divide-y divide-border rounded-lg border border-border bg-surface shadow-sm">
+        {data.items.map((item) => {
+          const done = item.status === "received";
+          return (
+            <li key={item.id} className="flex items-start gap-3 px-4 py-3">
+              <button
+                type="button"
+                role="checkbox"
+                aria-checked={done}
+                aria-label={`${item.item}: ${done ? "received" : "open"}`}
+                disabled={readOnly || busy === item.id}
+                onClick={() => void toggle(item)}
+                className={cn(
+                  "mt-0.5 inline-flex size-5 shrink-0 items-center justify-center rounded border transition-colors",
+                  done ? "border-success-fg bg-success-bg text-success-fg" : "border-border-strong bg-surface hover:border-fg-muted",
+                )}
+              >
+                {done && <Check className="size-3.5" aria-hidden />}
+              </button>
+              <div className="min-w-0 flex-1">
+                <p className={cn("text-sm font-medium", done ? "text-fg-muted line-through" : "text-fg")}>{item.item}</p>
+                {item.detail && <p className="mt-0.5 text-xs leading-5 text-fg-muted">{item.detail}</p>}
+              </div>
+              {item.source?.href && (
+                <Link
+                  href={item.source.href}
+                  className="inline-flex shrink-0 items-center gap-1 rounded border border-source-border bg-source-bg px-1.5 text-[11px] leading-5 font-medium text-source-fg hover:underline"
+                  title={item.source.label}
+                >
+                  <Clock className="size-3" aria-hidden />
+                  {item.source.label.split(" @ ")[1] ?? "Note"}
+                </Link>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 

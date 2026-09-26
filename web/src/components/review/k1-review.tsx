@@ -300,7 +300,7 @@ export function K1Review({ caseId, docId, initialPath = null }: { caseId: string
         </div>
       )}
 
-      <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
+      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
         <section aria-label="Source PDF" className="h-[60vh] min-h-0 border-b border-border lg:h-auto lg:border-r lg:border-b-0">
           <PdfPane
             docId={docId}
@@ -315,17 +315,20 @@ export function K1Review({ caseId, docId, initialPath = null }: { caseId: string
 
         <section aria-label="K-1 data" className="flex min-h-0 flex-col bg-canvas">
           <Tabs.Root value={tab} onValueChange={(v) => setTab(v as Tab)} className="flex min-h-0 flex-1 flex-col">
-            <Tabs.List aria-label="Review views" className="flex h-11 shrink-0 items-end gap-1 border-b border-border bg-surface px-3">
-              <TabTrigger value="boxes" label="Boxes" count={rows.length} shortcut="1" />
-              <TabTrigger value="exceptions" label="Exceptions" count={errors + flagCount} shortcut="2" alert={errors > 0 || toAck > 0} />
-              <TabTrigger value="ledger" label="Ledger" shortcut="3" />
+            <div className="flex h-11 shrink-0 items-end gap-1 overflow-x-auto border-b border-border bg-surface px-2 sm:px-3">
+              <Tabs.List aria-label="Review views" className="flex h-full items-end gap-1">
+                <TabTrigger value="boxes" label="Boxes" count={rows.length} shortcut="1" />
+                <TabTrigger value="exceptions" label="Exceptions" count={errors + flagCount} shortcut="2" alert={errors > 0 || toAck > 0} />
+                <TabTrigger value="ledger" label="Ledger" shortcut="3" />
+              </Tabs.List>
               {tab === "boxes" && (
-                <label className="mb-2 ml-auto flex items-center gap-2 text-xs text-fg-muted">
+                <label className="mb-2 ml-auto flex shrink-0 items-center gap-2 text-xs whitespace-nowrap text-fg-muted">
                   <input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} className="accent-[var(--primary)]" />
-                  Show empty
+                  <span className="sm:hidden">Empty</span>
+                  <span className="hidden sm:inline">Show empty</span>
                 </label>
               )}
-            </Tabs.List>
+            </div>
             <Tabs.Content value="boxes" className="min-h-0 flex-1 overflow-y-auto focus:outline-none" tabIndex={-1}>
               <BoxList
                 rows={rows}
@@ -398,7 +401,7 @@ function TabTrigger({ value, label, count, shortcut, alert }: { value: string; l
     <Tabs.Trigger
       value={value}
       aria-keyshortcuts={shortcut}
-      className="relative -mb-px flex h-10 items-center gap-1.5 border-b-2 border-transparent px-2.5 text-sm font-medium text-fg-muted transition-colors hover:text-fg data-[state=active]:border-primary data-[state=active]:text-fg"
+      className="relative -mb-px flex h-10 shrink-0 items-center gap-1.5 border-b-2 border-transparent px-2 text-sm sm:px-2.5 font-medium text-fg-muted transition-colors hover:text-fg data-[state=active]:border-primary data-[state=active]:text-fg"
     >
       {label}
       {count !== undefined && (

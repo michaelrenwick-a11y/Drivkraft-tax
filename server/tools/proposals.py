@@ -4,6 +4,13 @@ propose_edit is the only way chat can change a case (planning/05, "Reversible by
 default"). Accepting runs edit_k1_value with the proposal's rationale as the
 reason, so the edit history and the K-1's original value stay intact; undo
 reverses the edit and puts the proposal back in the queue.
+
+Meeting analysis (Phase 6) adds four kinds, each accepted differently:
+  doc_request        → a case checklist item
+  scenario           → a saved scenario (run_scenario with a name)
+  research_question  → tax_research when the question is cached (free); a live one
+                       returns the Research page link, where a person confirms the cost
+  follow_up          → marks the email draft approved (nothing else changes)
 """
 from __future__ import annotations
 
@@ -34,6 +41,9 @@ def source_href(ref: str) -> str | None:
         return f"/cases/{m[1]}/return?line={m[2]}"
     if ref.startswith("proposal://"):
         return "/inbox"
+    if m := re.fullmatch(r"note://([\w-]+)(?:#([tp])=(\d+))?", ref):
+        note = store.get_note(m[1])
+        return note and (f"/cases/{note['case_id']}/notes?note={m[1]}" + (f"&{m[2]}={m[3]}" if m[2] else ""))
     if m := re.fullmatch(r"research://([\w-]+)(?:/cite/(\d+))?", ref):
         return f"/research?entry={m[1]}" + (f"#cite-{m[2]}" if m[2] else "")
     return None
@@ -58,16 +68,36 @@ def _citation(ref: str) -> dict:
         hit = next((s for s in _sources(r) if s["ref"] == ref), None)
         if hit:
             return {**hit, "href": source_href(ref)}
+    if ref.startswith("note://"):
+        from .notes import note_source, resolve_ref
+        if hit := resolve_ref(ref):
+            return {**note_source(*hit), "href": source_href(ref)}
     return {"type": "other", "ref": ref, "label": ref, "href": None}
 
 
+KIND_LABELS = {"k1_edit": "K-1 edit", "doc_request": "Document request", "scenario": "Scenario",
+               "research_question": "Research question", "follow_up": "Follow-up email"}
+
+
 def _out(p: dict) -> dict:
-    doc = store.get_document(p["doc_id"]) or {"id": p["doc_id"], "label": None}
-    try:
-        label = k1doc.box_label(p["path"])
-    except ToolFailure:
-        label = p["path"]
-    return {**p, "label": label, "partnership": doc.get("label"),
+    partnership, label = None, None
+    pl = p.get("payload") or {}
+    if p["kind"] == "k1_edit":
+        doc = store.get_document(p["doc_id"]) or {"id": p["doc_id"], "label": None}
+        partnership = doc.get("label")
+        try:
+            label = k1doc.box_label(p["path"])
+        except ToolFailure:
+            label = p["path"]
+    else:
+        label = pl.get("item") or pl.get("name") or pl.get("question") or pl.get("subject") or KIND_LABELS[p["kind"]]
+    note = store.get_note(p["note_id"]) if p.get("note_id") else None
+    case = store.get_case(p["case_id"])
+    # Citations are stored at proposal time; refresh hrefs so they follow the current routes.
+    cites = [{**c, "href": source_href(c["ref"])} for c in p["citations"]]
+    return {**p, "citations": cites, "label": label, "kind_label": KIND_LABELS.get(p["kind"], p["kind"]),
+            "partnership": partnership, "case_name": case and case["name"],
+            "note_title": note and note["title"],
             "note": "AI proposal: not applied until a person accepts it" if p["status"] == "pending" else None}
 
 
@@ -123,13 +153,19 @@ def list_proposals(case_id: str | None = None, status: str | None = "pending") -
 
 @tool("W", "Accept a proposal", "POST", "/proposals/{proposal_id}/accept")
 def accept_proposal(proposal_id: str) -> dict:
-    """Apply a pending proposal as a K-1 edit (reason: the proposal's rationale).
-    Refused if the value changed since it was proposed. Writes; no cost.
+    """Apply a pending proposal. A K-1 edit becomes an edit (reason: the rationale;
+    refused if the value changed since). From meeting notes: a document request
+    joins the case checklist, a scenario is saved, a cached research question is
+    answered and saved (free), a live one returns `research_href` for the Research
+    page, where a person confirms the cost, and a follow-up draft is marked approved.
+    Writes; no cost.
     """
     p = _require(proposal_id)
     if p["status"] != "pending":
         raise ToolFailure("not_pending", f"This proposal is already {p['status']}",
                           "Undo it first (undo_proposal) to review it again.", status=409)
+    if p["kind"] != "k1_edit":
+        return _accept_other(p)
     doc = require_doc(p["doc_id"], writable=True)
     current = k1doc.load_otd(store.doc_dir(doc["case_id"], doc["id"]) / "current.otd.yaml")
     now_value = k1doc.get_value(current, p["path"])
@@ -155,19 +191,72 @@ def reject_proposal(proposal_id: str) -> dict:
 
 @tool("W", "Undo a proposal decision", "POST", "/proposals/{proposal_id}/undo")
 def undo_proposal(proposal_id: str) -> dict:
-    """Put an accepted or rejected proposal back in the queue. Undoing an accept
-    edits the value back to what it was (with a reason), so history is kept.
+    """Put an accepted or rejected proposal back in the queue. Undoing a K-1 edit
+    edits the value back (with a reason), so history is kept; undoing a document
+    request, scenario or cached research answer removes what the accept made.
     Writes; no cost.
     """
     p = _require(proposal_id)
     if p["status"] == "pending":
         raise ToolFailure("not_decided", "This proposal is still pending", "Nothing to undo.", status=409)
-    if p["status"] == "accepted":
+    if p["status"] == "accepted" and p["kind"] != "k1_edit":
+        _undo_other(p)
+    elif p["status"] == "accepted":
         doc = require_doc(p["doc_id"], writable=True)
         current = k1doc.load_otd(store.doc_dir(doc["case_id"], doc["id"]) / "current.otd.yaml")
         if k1doc.get_value(current, p["path"]) != p["new_value"]:
             raise ToolFailure("stale_proposal", f"{k1doc.box_label(p['path'])} was edited again after this was "
                               "accepted", "Edit the value directly instead (edit_k1_value).", status=409)
         edit_k1_value(doc["id"], p["path"], p["old_value"], f"Undid accepted proposal {proposal_id}")
-    store.update_proposal(proposal_id, status="pending", edit_id=None, resolved=None)
+    store.update_proposal(proposal_id, status="pending", edit_id=None, result=None, resolved=None)
     return {"proposal": _out(_require(proposal_id)), "sources": []}
+
+
+def _accept_other(p: dict) -> dict:
+    from .cases import require_case
+
+    case = require_case(p["case_id"], writable=True)
+    pl, cite = p["payload"], (p["citations"] or [{}])[0].get("ref")
+    extra: dict = {}
+    if p["kind"] == "doc_request":
+        item = store.insert_checklist({"id": store.new_id("chk"), "case_id": case["id"], "item": pl["item"],
+                                       "detail": pl.get("detail") or None, "source_ref": cite, "proposal_id": p["id"]})
+        result = {"checklist_id": item["id"]}
+    elif p["kind"] == "scenario":
+        from .returns import run_scenario
+        out = run_scenario(case["id"], pl["changes"], name=pl["name"])
+        result = {"scenario_id": out["scenario"]["id"], "href": f"/cases/{case['id']}/return?scenario={out['scenario']['id']}"}
+        extra = {"scenario": {k: out[k] for k in ("scenario", "applied", "ignored", "lines")}}
+    elif p["kind"] == "research_question":
+        from .. import research
+        from urllib.parse import urlencode
+        href = "/research?" + urlencode({"q": pl["question"], "case": case["id"]})
+        if research.match_cache(pl["question"]):
+            from .research import tax_research
+            r = tax_research(pl["question"], pl.get("mode") or "fast", case["id"])["research"]
+            result = {"research_id": r["id"], "cached": True, "href": f"/research?entry={r['id']}"}
+            extra = {"research": {"id": r["id"], "question": r["question"], "cached": True}}
+        else:     # never spend money from an accept: a person confirms the price on the Research page
+            price = research.PRICES_USD[pl.get("mode") or "fast"]
+            result = {"research_id": None, "cached": False, "href": href, "cost_usd": price}
+            extra = {"research_href": href, "next_step": f"Live research costs ${price:.2f}. Open the Research page "
+                                                         "(research_href) to confirm the price and run it."}
+    elif p["kind"] == "follow_up":
+        result = {"approved": True}
+    else:
+        raise ToolFailure("bad_kind", f"Unknown proposal kind {p['kind']!r}", "This proposal can't be applied.")
+    store.update_proposal(p["id"], status="accepted", result=result, resolved=store.now())
+    return {"proposal": _out(_require(p["id"])), "result": result, **extra, "sources": []}
+
+
+def _undo_other(p: dict) -> None:
+    from .cases import require_case
+
+    require_case(p["case_id"], writable=True)
+    r = p.get("result") or {}
+    if p["kind"] == "doc_request" and r.get("checklist_id"):
+        store.delete_checklist(r["checklist_id"])
+    elif p["kind"] == "scenario" and r.get("scenario_id"):
+        store.delete_scenario(r["scenario_id"])
+    elif p["kind"] == "research_question" and r.get("research_id") and r.get("cached"):
+        store.delete_research(r["research_id"])     # free cached answers only; live research is never undone

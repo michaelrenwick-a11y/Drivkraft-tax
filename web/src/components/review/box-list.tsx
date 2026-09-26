@@ -4,7 +4,7 @@ import { Pencil } from "lucide-react";
 import { Fragment, useEffect, useRef } from "react";
 import type { Entry } from "@/lib/api";
 import { cn } from "@/lib/cn";
-import { display, isAmount, spoken } from "@/lib/format";
+import { display, isAmount } from "@/lib/format";
 import { SourcePeek, type PageSize } from "./evidence";
 import { PART_TITLES, partOf, rowSeverity, type RowIssue } from "./model";
 
@@ -24,8 +24,8 @@ const DISPO_TEXT: Record<string, string> = {
 };
 
 /**
- * Box/code table as a listbox: j/k (or ↑/↓ when focused) moves, e edits. The
- * active row is announced with its full spoken value.
+ * Box/code table as a listbox: j/k (or ↑/↓ when focused) moves, e edits. Each row's
+ * name is its visible text (box, description, value) plus screen-reader-only status.
  */
 export function BoxList({
   rows,
@@ -92,7 +92,6 @@ export function BoxList({
               id={rowId(r.path)}
               role="option"
               aria-selected={sel}
-              aria-label={`${spoken(r.label, r.description, r.value)}. ${DISPO_TEXT[r.disposition]}${r.edited ? ", edited" : ""}${sev === "error" ? ", has an error" : sev === "warning" ? ", needs attention" : ""}`}
               onClick={() => onSelect(r.path)}
               onDoubleClick={onEdit}
               className={cn(
@@ -103,7 +102,10 @@ export function BoxList({
               {sel && <span className="absolute inset-y-0 left-0 w-0.5 bg-primary" aria-hidden />}
               <span className="flex items-center gap-1.5 font-medium text-fg">
                 <span className={cn("size-1.5 shrink-0 rounded-full", sev ? MARK[sev] : "bg-transparent")} aria-hidden />
-                <span className="truncate">{r.label.replace(/^Box /, "").replace(/^Item /, "Item ")}</span>
+                <span className="truncate">
+                  {r.label.startsWith("Box ") && <span className="sr-only">Box </span>}
+                  {r.label.replace(/^Box /, "").replace(/^Item /, "Item ")}
+                </span>
               </span>
               <span className="min-w-0">
                 <span className="block truncate text-[13px] text-fg-muted">
@@ -134,6 +136,9 @@ export function BoxList({
                   aria-hidden
                 >
                   {DISPO_TEXT[r.disposition]}
+                </span>
+                <span className="sr-only">
+                  {`, ${DISPO_TEXT[r.disposition]}${r.edited ? ", edited" : ""}${sev === "error" ? ", has an error" : sev === "warning" ? ", needs attention" : ""}`}
                 </span>
               </span>
             </div>

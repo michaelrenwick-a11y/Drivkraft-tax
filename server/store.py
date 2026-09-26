@@ -69,11 +69,14 @@ CREATE TABLE IF NOT EXISTS scenarios (
 CREATE TABLE IF NOT EXISTS proposals (
   id TEXT PRIMARY KEY,
   case_id TEXT NOT NULL REFERENCES cases(id),
-  doc_id TEXT NOT NULL REFERENCES documents(id),
-  kind TEXT NOT NULL,              -- k1_edit
-  path TEXT NOT NULL,
+  doc_id TEXT REFERENCES documents(id),     -- k1_edit only
+  kind TEXT NOT NULL,              -- k1_edit | doc_request | scenario | research_question | follow_up
+  path TEXT,                       -- k1_edit only
   old_value TEXT,                  -- JSON: value when proposed
   new_value TEXT,                  -- JSON
+  payload TEXT NOT NULL DEFAULT '{}',       -- JSON: kind-specific fields (e.g. scenario changes)
+  result TEXT,                     -- JSON: what an accept made (checklist id, scenario id, research id)
+  note_id TEXT,                    -- the meeting note it came from
   rationale TEXT NOT NULL,
   citations TEXT NOT NULL DEFAULT '[]',     -- JSON: sources[] the proposal relies on
   origin TEXT NOT NULL,            -- chat | mcp | http
@@ -81,6 +84,31 @@ CREATE TABLE IF NOT EXISTS proposals (
   edit_id INTEGER,                 -- the edit an accept made
   created TEXT NOT NULL,
   resolved TEXT
+);
+CREATE TABLE IF NOT EXISTS notes (
+  id TEXT PRIMARY KEY,
+  case_id TEXT NOT NULL REFERENCES cases(id),
+  kind TEXT NOT NULL,              -- typed | transcript | dictated
+  title TEXT NOT NULL,
+  meeting_date TEXT,               -- YYYY-MM-DD
+  attendees TEXT NOT NULL DEFAULT '[]',     -- JSON
+  text TEXT NOT NULL,
+  segments TEXT NOT NULL,          -- JSON: [{i, t, speaker, text}], t in seconds or null
+  sample TEXT,                     -- bundled sample transcript it came from
+  analysis TEXT,                   -- JSON: the last analyze_meeting result
+  analyzed_at TEXT,
+  created TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS checklist (
+  id TEXT PRIMARY KEY,
+  case_id TEXT NOT NULL REFERENCES cases(id),
+  item TEXT NOT NULL,
+  detail TEXT,
+  status TEXT NOT NULL,            -- open | received
+  source_ref TEXT,                 -- e.g. note://…#t=…
+  proposal_id TEXT,
+  created TEXT NOT NULL,
+  updated TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS research (
   id TEXT PRIMARY KEY,
@@ -125,8 +153,23 @@ def configure(root: Path | None = None) -> Path:
     _root = Path(root or paths.DATA)
     _root.mkdir(parents=True, exist_ok=True)
     with connect() as db:
+        _migrate_proposals(db)
         db.executescript(SCHEMA)
     return _root
+
+
+def _migrate_proposals(db: sqlite3.Connection) -> None:
+    """Phase 6 made proposals general (nullable doc_id/path, payload, result, note_id).
+    SQLite can't drop NOT NULL in place, so an older table is rebuilt once."""
+    cols = {r[1] for r in db.execute("PRAGMA table_info(proposals)")}
+    if not cols or "payload" in cols:
+        return
+    db.execute("ALTER TABLE proposals RENAME TO proposals_v1")
+    db.executescript(SCHEMA)
+    db.execute("INSERT INTO proposals (id, case_id, doc_id, kind, path, old_value, new_value, rationale, citations,"
+               " origin, status, edit_id, created, resolved) SELECT id, case_id, doc_id, kind, path, old_value,"
+               " new_value, rationale, citations, origin, status, edit_id, created, resolved FROM proposals_v1")
+    db.execute("DROP TABLE proposals_v1")
 
 
 def root() -> Path:
@@ -161,7 +204,8 @@ def _row(r: sqlite3.Row | None) -> dict | None:
     if r is None:
         return None
     d = dict(r)
-    for k in ("progress", "acknowledged", "old_value", "new_value", "data", "changes", "citations", "steps"):
+    for k in ("progress", "acknowledged", "old_value", "new_value", "data", "changes", "citations", "steps",
+              "payload", "result", "attendees", "segments", "analysis"):
         if k in d and isinstance(d[k], str):
             d[k] = json.loads(d[k])
     if "cached" in d:
@@ -281,14 +325,16 @@ def delete_scenario(scenario_id: str) -> bool:
 
 
 def insert_proposal(p: dict) -> dict:
-    row = {"status": "pending", "edit_id": None, "resolved": None, "created": now(), **p}
+    row = {"status": "pending", "edit_id": None, "resolved": None, "created": now(), "doc_id": None, "path": None,
+           "old_value": None, "new_value": None, "payload": {}, "result": None, "note_id": None, **p}
     enc = {**row, "old_value": json.dumps(row["old_value"]), "new_value": json.dumps(row["new_value"]),
-           "citations": json.dumps(row["citations"])}
+           "citations": json.dumps(row["citations"]), "payload": json.dumps(row["payload"]),
+           "result": None if row["result"] is None else json.dumps(row["result"])}
     with connect() as db:
-        db.execute("INSERT INTO proposals (id, case_id, doc_id, kind, path, old_value, new_value, rationale, citations,"
-                   " origin, status, edit_id, created, resolved) VALUES (:id, :case_id, :doc_id, :kind, :path,"
-                   " :old_value, :new_value, :rationale, :citations, :origin, :status, :edit_id, :created, :resolved)",
-                   enc)
+        db.execute("INSERT INTO proposals (id, case_id, doc_id, kind, path, old_value, new_value, payload, result,"
+                   " note_id, rationale, citations, origin, status, edit_id, created, resolved) VALUES (:id, :case_id,"
+                   " :doc_id, :kind, :path, :old_value, :new_value, :payload, :result, :note_id, :rationale,"
+                   " :citations, :origin, :status, :edit_id, :created, :resolved)", enc)
     return row
 
 
@@ -297,10 +343,12 @@ def get_proposal(proposal_id: str) -> dict | None:
         return _row(db.execute("SELECT * FROM proposals WHERE id = ?", (proposal_id,)).fetchone())
 
 
-def list_proposals(case_id: str | None = None, status: str | None = None) -> list[dict]:
+def list_proposals(case_id: str | None = None, status: str | None = None, note_id: str | None = None) -> list[dict]:
     sql, args = "SELECT * FROM proposals WHERE 1=1", []
     if case_id:
         sql, args = sql + " AND case_id = ?", [*args, case_id]
+    if note_id:
+        sql, args = sql + " AND note_id = ?", [*args, note_id]
     if status:
         sql, args = sql + " AND status = ?", [*args, status]
     with connect() as db:
@@ -308,9 +356,16 @@ def list_proposals(case_id: str | None = None, status: str | None = None) -> lis
 
 
 def update_proposal(proposal_id: str, **fields: Any) -> None:
+    if "result" in fields and fields["result"] is not None:
+        fields["result"] = json.dumps(fields["result"])
     cols = ", ".join(f"{k} = :{k}" for k in fields)
     with connect() as db:
         db.execute(f"UPDATE proposals SET {cols} WHERE id = :_id", {**fields, "_id": proposal_id})
+
+
+def delete_proposal(proposal_id: str) -> bool:
+    with connect() as db:
+        return db.execute("DELETE FROM proposals WHERE id = ?", (proposal_id,)).rowcount > 0
 
 
 def insert_research(r: dict) -> dict:
@@ -342,11 +397,84 @@ def delete_research(research_id: str) -> bool:
         return db.execute("DELETE FROM research WHERE id = ?", (research_id,)).rowcount > 0
 
 
+def insert_note(n: dict) -> dict:
+    row = {"meeting_date": None, "attendees": [], "sample": None, "analysis": None, "analyzed_at": None,
+           "created": now(), **n}
+    with connect() as db:
+        db.execute("INSERT INTO notes (id, case_id, kind, title, meeting_date, attendees, text, segments, sample,"
+                   " analysis, analyzed_at, created) VALUES (:id, :case_id, :kind, :title, :meeting_date, :attendees,"
+                   " :text, :segments, :sample, :analysis, :analyzed_at, :created)",
+                   {**row, "attendees": json.dumps(row["attendees"]), "segments": json.dumps(row["segments"]),
+                    "analysis": None if row["analysis"] is None else json.dumps(row["analysis"])})
+    return row
+
+
+def get_note(note_id: str) -> dict | None:
+    with connect() as db:
+        return _row(db.execute("SELECT * FROM notes WHERE id = ?", (note_id,)).fetchone())
+
+
+def list_notes(case_id: str | None = None) -> list[dict]:
+    sql, args = "SELECT * FROM notes", []
+    if case_id:
+        sql, args = sql + " WHERE case_id = ?", [case_id]
+    with connect() as db:
+        return [_row(r) for r in db.execute(sql + " ORDER BY COALESCE(meeting_date, created) DESC, created DESC", args)]
+
+
+def update_note(note_id: str, **fields: Any) -> None:
+    if "analysis" in fields and fields["analysis"] is not None:
+        fields["analysis"] = json.dumps(fields["analysis"])
+    cols = ", ".join(f"{k} = :{k}" for k in fields)
+    with connect() as db:
+        db.execute(f"UPDATE notes SET {cols} WHERE id = :_id", {**fields, "_id": note_id})
+
+
+def delete_note(note_id: str) -> bool:
+    with connect() as db:
+        db.execute("DELETE FROM proposals WHERE note_id = ? AND status = 'pending'", (note_id,))
+        return db.execute("DELETE FROM notes WHERE id = ?", (note_id,)).rowcount > 0
+
+
+def insert_checklist(item: dict) -> dict:
+    ts = now()
+    row = {"detail": None, "status": "open", "source_ref": None, "proposal_id": None, "created": ts, "updated": ts,
+           **item}
+    with connect() as db:
+        db.execute("INSERT INTO checklist (id, case_id, item, detail, status, source_ref, proposal_id, created,"
+                   " updated) VALUES (:id, :case_id, :item, :detail, :status, :source_ref, :proposal_id, :created,"
+                   " :updated)", row)
+    return row
+
+
+def get_checklist_item(item_id: str) -> dict | None:
+    with connect() as db:
+        return _row(db.execute("SELECT * FROM checklist WHERE id = ?", (item_id,)).fetchone())
+
+
+def list_checklist(case_id: str) -> list[dict]:
+    with connect() as db:
+        return [_row(r) for r in db.execute("SELECT * FROM checklist WHERE case_id = ? ORDER BY created, rowid",
+                                            (case_id,))]
+
+
+def update_checklist(item_id: str, **fields: Any) -> None:
+    fields["updated"] = now()
+    cols = ", ".join(f"{k} = :{k}" for k in fields)
+    with connect() as db:
+        db.execute(f"UPDATE checklist SET {cols} WHERE id = :_id", {**fields, "_id": item_id})
+
+
+def delete_checklist(item_id: str) -> bool:
+    with connect() as db:
+        return db.execute("DELETE FROM checklist WHERE id = ?", (item_id,)).rowcount > 0
+
+
 def reset() -> None:
-    """Delete every case, document, edit, input, scenario and event, and the case folders.
+    """Delete every case, document, edit, input, scenario, note and event, and the case folders.
     The caller re-seeds the reference cases."""
     with connect() as db:
-        for table in ("research", "proposals", "edits", "inputs", "scenarios", "documents", "cases", "events"):
+        for table in ("checklist", "notes", "research", "proposals", "edits", "inputs", "scenarios", "documents", "cases", "events"):
             db.execute(f"DELETE FROM {table}")
     shutil.rmtree(root() / "cases", ignore_errors=True)
 

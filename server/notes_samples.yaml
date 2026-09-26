@@ -1,0 +1,85 @@
+# Bundled meeting notes (Phase 6). Synthetic: the Riveras, their preparer and the call
+# are invented for this practice build. Each sample carries a cached analysis (the same
+# shape analyze_meeting asks Claude for) so the notes → proposals flow works without an
+# Anthropic key. The analysis was WRITTEN FOR THIS DEMO, not produced by a model.
+#
+# `segment` is the index i of the transcript segment an item comes from (server/notes.py parse()).
+samples:
+  - id: rivera-planning
+    title: Rivera · 2025 planning call
+    kind: transcript
+    meeting_date: "2026-03-18"
+    attendees: [Dana Price (preparer), Luis Rivera, Maria Rivera]
+    description: A 5-minute planning call that mentions Box 13 H investment interest, a missing K-1, a 1099-B and a filing-status question.
+    transcript: |
+      [00:00:00] Dana Price: Thanks for making time. The goal today is to go over your 2025 K-1s and what's still missing before I calculate the return.
+      [00:00:21] Luis Rivera: Sure. The Copperleaf Real Estate Fund V package came in March. The Harbor Point Partners K-1 still hasn't shown up.
+      [00:00:48] Dana Price: Harbor Point usually extends, so it may not come until later in the year. I can't file without it, so we need either the K-1 or at least an estimate from them.
+      [00:01:15] Maria Rivera: I'll email their investor relations team this week and ask for a date.
+      [00:01:32] Dana Price: On Copperleaf, Box 13 code H shows three hundred thirteen thousand dollars of investment interest expense. That's a big number.
+      [00:02:05] Luis Rivera: That's the margin interest the fund passes through. Can we deduct all of it?
+      [00:02:20] Dana Price: Not necessarily. Investment interest is limited to net investment income, and the excess carries forward. I want to confirm how that limit applies here before we count on the deduction, and I'll run the return without it so you can see the worst case.
+      [00:03:02] Maria Rivera: We got married in June. Does filing jointly change any of this?
+      [00:03:18] Dana Price: It can. Let's run it both ways, single versus married filing jointly, and compare before we decide.
+      [00:03:50] Luis Rivera: One more thing. Maria started consulting from home this year. Is there a home office deduction?
+      [00:04:12] Dana Price: Possibly. It depends on regular and exclusive use of the space. I'll look into it. I also need the 1099-B from your brokerage account for the capital gains.
+      [00:04:40] Luis Rivera: I'll download it tonight and upload it.
+      [00:05:05] Dana Price: Great. I'll send a recap email with the list. We'll hold the return until the Harbor Point K-1 arrives and plan to file on extension by October 15.
+    analysis:
+      summary: >-
+        Dana Price reviewed the Riveras' 2025 K-1s. Copperleaf's large Box 13 H investment interest needs the
+        §163(d) limit checked, a joint-versus-single comparison is wanted after the June marriage, and the
+        return waits on the Harbor Point K-1 and a brokerage 1099-B.
+      decisions:
+        - text: Compare single and married filing jointly before choosing a filing status.
+          segment: 8
+        - text: Hold the return until the Harbor Point K-1 arrives; file on extension by October 15.
+          segment: 12
+        - text: Maria will contact Harbor Point investor relations this week for a K-1 date.
+          segment: 3
+      doc_requests:
+        - item: 2025 Schedule K-1 from Harbor Point Partners
+          detail: Not received yet; Maria is asking investor relations for a date or an estimate. The return can't be filed without it.
+          segment: 2
+        - item: 2025 Form 1099-B from the brokerage account
+          detail: Needed for the capital gains. Luis will download and upload it.
+          segment: 10
+      scenarios:
+        - name: File jointly
+          rationale: The Riveras married in June; Dana wants single and married filing jointly side by side.
+          filing_status: mfj
+          k1_box_values: []
+          segment: 8
+        - name: Without Box 13 H investment interest
+          rationale: The worst case if the §163(d) limit disallows the investment interest this year.
+          filing_status: null
+          k1_box_values:
+            - doc_id: null
+              path: part_iii.box_13.H
+              value: null
+          segment: 6
+      research_questions:
+        - question: Is investment interest expense from K-1 Box 13 code H limited?
+          rationale: Copperleaf passes through $313,000 of investment interest; Dana wants to confirm the net investment income limit before relying on it.
+          segment: 6
+        - question: Can a taxpayer who started a consulting business from home in 2025 deduct a home office, and what are the regular and exclusive use requirements?
+          rationale: Maria began consulting from home this year.
+          segment: 9
+      follow_up:
+        subject: Your 2025 return, recap and next steps
+        body: |
+          Hi Luis and Maria,
+
+          Thanks for the time today. Here's where we landed:
+
+          - We'll compare filing single and married filing jointly before choosing.
+          - We'll hold the return until the Harbor Point K-1 arrives and plan to file on extension by October 15.
+
+          What I still need from you:
+          1. The 2025 Schedule K-1 from Harbor Point Partners (Maria is asking their investor relations team for a date).
+          2. The 2025 Form 1099-B from your brokerage account.
+
+          I'm also checking how the investment interest limit applies to the Copperleaf K-1, and whether Maria's home office qualifies.
+
+          Best,
+          Dana

@@ -44,7 +44,16 @@ const usd = (v: number) => (v === 0 ? "Free" : `$${v.toFixed(2)}`);
  * answer with numbered citations, optionally on a case. Cached demo answers are free
  * and labeled; live Bizora queries need a confirmed price. j/k move, / focuses the question.
  */
-export function ResearchView({ initialEntry, initialCase }: { initialEntry: string | null; initialCase: string | null }) {
+export function ResearchView({
+  initialEntry,
+  initialCase,
+  initialQuestion = null,
+}: {
+  initialEntry: string | null;
+  initialCase: string | null;
+  /** ?q= prefill, e.g. from an accepted meeting-note research question: the cost dialog opens for a person to confirm. */
+  initialQuestion?: string | null;
+}) {
   const { paletteOpen, chatOpen } = useUI();
   const toast = useToast();
   const [caseFilter, setCaseFilter] = useState<string>(initialCase ?? "");
@@ -115,6 +124,7 @@ export function ResearchView({ initialEntry, initialCase }: { initialEntry: stri
       <AskCard
         key={caseFilter}
         questionRef={questionRef}
+        initialQuestion={initialQuestion}
         cases={cases}
         defaultCase={caseFilter}
         listing={data}
@@ -230,6 +240,7 @@ export function ResearchView({ initialEntry, initialCase }: { initialEntry: stri
 
 function AskCard({
   questionRef,
+  initialQuestion,
   cases,
   defaultCase,
   listing,
@@ -237,19 +248,23 @@ function AskCard({
   onError,
 }: {
   questionRef: React.RefObject<HTMLTextAreaElement | null>;
+  initialQuestion: string | null;
   cases: Case[];
   defaultCase: string;
   listing: ResearchListing | null;
   onDone: (id: string) => Promise<void>;
   onError: (e: ApiError["error"]) => void;
 }) {
-  const [question, setQuestion] = useState("");
+  const [question, setQuestion] = useState(initialQuestion ?? "");
   const [mode, setMode] = useState<ResearchMode>("fast");
   const [caseId, setCaseId] = useState(defaultCase);
   const [invite, setInvite] = useState("");
   const [priced, setPriced] = useState<{ key: string; quote: ResearchQuote } | null>(null);
   const [running, setRunning] = useState(false);
   const [confirm, setConfirm] = useState(false);
+
+  // A prefilled question opens the cost confirmation once it's priced (it never runs by itself).
+  const prefill = useRef(initialQuestion?.trim() || null);
 
   // Price the question as it's typed: free when it matches the demo cache.
   const key = `${mode}|${question.trim()}`;
@@ -260,7 +275,14 @@ function AskCard({
     let live = true;
     const t = setTimeout(() => {
       api<ResearchQuote>("/research/quote", { json: { question: q, mode } })
-        .then((r) => live && setPriced({ key: `${mode}|${q}`, quote: r }))
+        .then((r) => {
+          if (!live) return;
+          setPriced({ key: `${mode}|${q}`, quote: r });
+          if (prefill.current === q) {
+            prefill.current = null;
+            if (!r.cached && r.live_available) setConfirm(true);
+          }
+        })
         .catch(() => undefined);
     }, 250);
     return () => {
@@ -339,7 +361,7 @@ function AskCard({
                 mode === m.id ? "bg-primary text-primary-fg" : "text-fg-muted hover:text-fg",
               )}
             >
-              {m.label} <span className={cn("tabular-nums", mode === m.id ? "opacity-80" : "text-fg-subtle")}>${(listing?.status.prices_usd[m.id] ?? 0).toFixed(2)}</span>
+              {m.label} <span className={cn("tabular-nums", mode === m.id ? "" : "text-fg-subtle")}>${(listing?.status.prices_usd[m.id] ?? 0).toFixed(2)}</span>
             </button>
           ))}
         </div>

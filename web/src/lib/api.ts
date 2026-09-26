@@ -302,24 +302,105 @@ export const FILING_STATUS_LABELS: Record<FilingStatus, string> = {
 
 export type ProposalStatus = "pending" | "accepted" | "rejected";
 
+export type ProposalKind = "k1_edit" | "doc_request" | "scenario" | "research_question" | "follow_up";
+export type Citation = Source & { href?: string | null };
+
 export type Proposal = {
   id: string;
   case_id: string;
-  doc_id: string;
-  kind: "k1_edit";
-  path: string;
+  case_name: string | null;
+  kind: ProposalKind;
+  kind_label: string;
+  /** k1_edit only */
+  doc_id: string | null;
+  path: string | null;
   label: string;
   partnership: string | null;
   old_value: number | string | boolean | null;
   new_value: number | string | boolean | null;
+  /** Meeting-note kinds: doc_request {item, detail} · scenario {name, changes} ·
+   *  research_question {question, mode} · follow_up {subject, body} */
+  payload: Record<string, unknown>;
+  /** What an accept made: {checklist_id} · {scenario_id, href} · {research_id, cached, href} · {approved} */
+  result: Record<string, unknown> | null;
+  note_id: string | null;
+  note_title: string | null;
   rationale: string;
-  citations: (Source & { href?: string | null })[];
+  citations: Citation[];
   origin: "chat" | "mcp" | "http";
   status: ProposalStatus;
   edit_id: number | null;
   created: string;
   resolved: string | null;
   note: string | null;
+};
+
+export type AcceptResult = {
+  proposal: Proposal;
+  result?: Record<string, unknown>;
+  research_href?: string;
+  next_step?: string;
+};
+
+/* ── Meeting notes (Phase 6) ─────────────────────────────────────────── */
+
+export type NoteKind = "typed" | "transcript" | "dictated";
+
+export type NoteSummary = {
+  id: string;
+  case_id: string;
+  case_name?: string | null;
+  kind: NoteKind;
+  title: string;
+  meeting_date: string | null;
+  attendees: string[];
+  sample: string | null;
+  segments: number;
+  timed: boolean;
+  duration_s: number | null;
+  analyzed: boolean;
+  analyzed_at: string | null;
+  summary: string | null;
+  preview: string;
+  created: string;
+};
+
+export type NoteSegment = { i: number; t: number | null; clock: string | null; speaker: string | null; text: string; ref: string };
+
+/** The analysis as stored on the note (segment = index into segments). */
+export type NoteAnalysis = {
+  summary: string | null;
+  decisions: { text: string; segment: number | null }[];
+  cached?: boolean;
+  model?: string | null;
+  skipped_scenarios?: string[];
+};
+
+export type NoteFull = Omit<NoteSummary, "segments"> & { text: string; segments: NoteSegment[]; analysis: NoteAnalysis | null };
+
+export type NotesListing = {
+  notes: NoteSummary[];
+  samples: { id: string; title: string; description: string }[];
+  analysis_available: boolean;
+};
+
+export type AnalysisOut = {
+  analysis: { summary: string | null; decisions: { text: string; source?: Source }[]; cached: boolean; model: string | null; skipped_scenarios: string[] };
+  proposals: Proposal[];
+  already_analyzed: boolean;
+};
+
+export type ChecklistItem = {
+  id: string;
+  case_id: string;
+  item: string;
+  detail: string | null;
+  status: "open" | "received";
+  source_ref: string | null;
+  source: Citation | null;
+  proposal_id: string | null;
+  created: string;
+  updated: string;
 };
 
 /* ── Research (Phase 5) ──────────────────────────────────────────────── */

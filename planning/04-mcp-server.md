@@ -55,8 +55,10 @@ Legend: **R** read-only · **W** writes to the case · **$** costs money · **P*
 | | `calculate_return(case_id, scenario?)` | R | lines, warnings, validate results |
 | | `explain_line(case_id, line)` | R | per-K-1/input contributions (leave-one-out) |
 | | `run_scenario(case_id, name, changes)` | W | scenario diff vs base |
-| Research | `tax_research(question, mode, case_id?)` | $ | answer + structured citations (cached in demo) |
-| | `list_research(case_id)` | R | entries |
+| Research | `quote_research(question, mode)` | R | cached?, cost (fast $0.24 · deep $1.50 · cached $0) |
+| | `tax_research(question, mode, case_id?, confirm_cost_usd?, invite_code?)` | $ | answer with `[n]` markers + numbered citations; live runs need `confirm_cost_usd` = price |
+| | `list_research(case_id?)` / `get_research(id)` | R | entries, cached questions, spend / one answer + related K-1 boxes |
+| | `delete_research(id)` | W | deleted id |
 | Notes | `add_note(case_id, text, kind, meeting_meta?)` | W | note id |
 | | `search_notes(case_id?, query)` | R | matches with timestamps |
 | | `analyze_meeting(note_id)` | P | decisions, doc requests, scenarios, research Qs, follow-up draft |
@@ -82,7 +84,8 @@ Legend: **R** read-only · **W** writes to the case · **$** costs money · **P*
 
 ## Conventions
 
-- Every tool response includes `sources[]` (`{type: k1_box|note|research|workpaper_cell|return_line, ref, label}`) so any client can render citations the same way.
+- Every tool response includes `sources[]` (`{type: k1_box|note|research|workpaper_cell|return_line, ref, label}`) so any client can render citations the same way. Research refs are `research://{id}` and `research://{id}/cite/{n}`.
+- **$ tools** never spend on their own: a billed call fails with `cost_confirmation_required` (HTTP 402, price in `detail`) until the caller passes `confirm_cost_usd` equal to the price, after asking the user. The web chat doesn't get the confirmation argument, so it only ever gets cached answers.
 - Errors are structured: `{code, message, fix_hint}`. Bridge issues already carry `code`, `message`, `path` and `severity` (`server/bridge/translator.py`); `fix_hint` is added per code in Phase 1.5.
 - OTD paths (`part_iii.box_20.Z.statement.qbi`) are the canonical box reference in every tool, resource and `sources[]` entry. There are no bare stack traces, and the UI shows `fix_hint`.
 - Tool descriptions are written for the model: say when to use the tool, what it won't do, and its cost.

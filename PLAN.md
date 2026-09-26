@@ -1,6 +1,6 @@
 # Drivkraft Tax — Practice Build Plan
 
-> v5 (2026-09-25; Phases 0–2 done). **A personal practice project and portfolio piece** built on the Open Tax Technology Alliance's open code: the OTD K-1 standard (`opentaxdocument/otd-spec`) and the OpenTax 1040 engine (`filedcom/opentax`). It is not a product. It's fully separate from the Drivkraft platform (no shared code, database or accounts) and borrows only Drivkraft's visual design as a starting point.
+> v6 (2026-09-25; Phases 0–5 done). **A personal practice project and portfolio piece** built on the Open Tax Technology Alliance's open code: the OTD K-1 standard (`opentaxdocument/otd-spec`) and the OpenTax 1040 engine (`filedcom/opentax`). It is not a product. It's fully separate from the Drivkraft platform (no shared code, database or accounts) and borrows only Drivkraft's visual design as a starting point.
 
 ## Charter
 
@@ -42,12 +42,14 @@ drivkraft-tax/
 ├── vendor/                # gitignored: otd-spec checkout, opentax binary
 ├── server/                # Python: MCP server + FastAPI (one package)
 │   ├── app.py             # both adapters over the tool registry
-│   ├── tools/             # cases · k1 · returns  (later: research · notes · output · efile)
+│   ├── tools/             # cases · k1 · returns · proposals · research  (later: notes · output · efile)
 │   ├── bridge/            # OTD → OpenTax mapping + ledger
-│   ├── store.py  k1doc.py  intake.py  samples.py  demo.py  engine.py  errors.py
+│   ├── chat.py            # web chat loop over our MCP server (SSE)
+│   ├── research.py  research_cache.yaml   # Bizora client + demo answers
+│   ├── store.py  k1doc.py  intake.py  samples.py  demo.py  engine.py  calc.py  errors.py  paths.py
 │   └── tests/
-├── web/src/               # Next.js app: app/ routes, components/{shell,ui,cases,review}, lib/
-├── demo/                  # (Phase 10) seed cases, cached research answers, scripted tour
+├── web/src/               # Next.js app: app/ routes, components/{shell,ui,cases,review,return,inbox,research}, lib/
+├── demo/                  # (Phase 10) seed cases, scripted tour (research cache already lives in server/)
 ├── data/                  # gitignored: SQLite + cases/<id>/docs/<doc>/…
 ├── docs/                  # (Phase 10) README assets, architecture diagram, video script
 └── scripts/  bootstrap.sh · smoke.sh
@@ -122,9 +124,17 @@ Each phase ends with something runnable *and* meets its UX criteria from `planni
 - Tools: `add_note` (typed, pasted transcript, dictated), `search_notes`, `analyze_meeting` → decisions, document requests (added to the case checklist), suggested scenarios, research questions and a follow-up draft, all as accept/reject proposals. Resource `note://{id}` with timestamps.
 - Optional: `import_zoom_meeting` via the Zoom connector, if it exposes transcripts (verify first).
 - UI: a notes timeline per case. Proposals appear as cards you can accept with one click.
+- Carried from Phases 4–5:
+  - **Generalize proposals.** The `proposals` table is K-1-only today (`doc_id NOT NULL`, `kind: k1_edit`, `path`). `analyze_meeting` needs kinds `doc_request`, `scenario`, `research_question` and `follow_up`, so make `doc_id`/`path` nullable and add a JSON `payload` column. SQLite can't drop NOT NULL in place, so rebuild the table in `store.configure()`, guarded by a check of the current schema. The Inbox renders each kind as its own card; `accept_proposal` dispatches on kind.
+  - **Research questions never run on their own.** Accepting a `research_question` calls `tax_research` with the case: cached questions answer at once, and a live one opens the Research page's cost dialog with the question filled in (a new `/research?q=…&case=…` prefill). The gate stays with the person.
+  - `analyze_meeting` calls Anthropic like chat: `paths.load_env()`, "not configured" without a key, and tests that drive a scripted fake client (reuse `test_chat.py`'s `FakeClient`). Seed one synthetic transcript (a Rivera planning call that mentions Box 13 H and a missing K-1) so the flow works offline, with its analysis cached the same way the research answers are.
+  - Sources: `note://{id}` and `note://{id}#t=<seconds>`. Add them to `source_href` (→ `/cases/{id}/notes?note=…&t=…`) and to `_citation`, as research did.
+  - Case header: the new Research button sets the pattern, so add Notes next to it. Consider real case tabs (Overview · Return · Notes · Research, per `05-ux`) once there are four destinations.
+  - The UX checks still open (375 px on the return view, Inbox and Research; Lighthouse/axe on the Phase 2–5 routes) need Chrome DevTools device mode or a real narrow window, since the extension's resize doesn't apply. Do them once for all routes at the end of Phase 6.
 
 ### Phase 7 — Outputs: Excel round-trip + review packet *(medium)*
 - Tools: `export_workpaper`, `import_workpaper` (cell-level diff, version-conflict check), `apply_changeset`, `build_review_packet` (PDF: evidence, edits, research citations, notes, scenarios).
+- Carried from Phase 5: the packet's research section comes from `list_research(case_id)` + `get_research`. Print each answer with its numbered citations and URLs, and label cached demo answers as "written for this demo" exactly as the page does. The workpaper gets a Research sheet (question, mode, cached/live, cost, citations).
 - UI: diff review screen (accept or reject per cell or all), plus a download center.
 - Stretch: an Office.js task-pane add-in that connects to the same server (Prowork-style).
 
@@ -135,6 +145,7 @@ Each phase ends with something runnable *and* meets its UX criteria from `planni
 
 ### Phase 9 — Operator view *(small)*
 - `/operator`: cases by status, K-1s processed, exception types, bridge "unsupported" counts by box, tool-call counts and latency, AI/Bizora usage and estimated cost, demo visitors, upstream versions and smoke-test status.
+- Carried from Phase 5: Bizora spend is `SUM(research.cost_usd)` (cached rows are $0), split cached vs live and by mode. The `events` table has no cost column, so either add one or join `research`; chat's Anthropic cost needs token usage logged per turn (not stored yet).
 
 ### Phase 10 — Demo & share *(medium)*
 - **Hosting:** web on Vercel; server (MCP + worker + opentax binary) as a container on Fly.io or Render.
@@ -143,6 +154,7 @@ Each phase ends with something runnable *and* meets its UX criteria from `planni
 - **Guided tour:** an optional 6-step walkthrough overlay for first-time visitors.
 - **Shareables:** a public GitHub repo (README with a diagram, local setup, and the OTD → OpenTax gap findings); a 2-minute video; a case-study page published as a shareable link; a remote MCP URL plus "add to Claude Desktop" instructions.
 - **Credits** page: OpenTax (AGPL, source link), OTD (CC BY), Bizora.
+- Carried from Phase 5: the research invite gate already exists (`DRIVKRAFT_INVITE_CODE`, checked by `tax_research`); reuse the same code for the MCP endpoint (Q4). Before going public, have the three cached answers in `server/research_cache.yaml` reviewed against their authorities (they're authored, not Bizora output), and make one real Bizora call to confirm the streamed `custom_data` placement the parser assumes.
 
 ---
 
@@ -152,8 +164,8 @@ Each phase ends with something runnable *and* meets its UX criteria from `planni
 |---|---|---|
 | M0 ✓ | 0 | Upstream tools run; app shell looks finished even while empty |
 | M1 ✓ | 1, 1.5 | Claude Desktop answers questions about the proof K-1 via our MCP server (tested over a stdio client; Desktop walk-through pending) |
-| M2 | 2 ✓, 3 | Synthetic K-1 PDF → approved → 1040 with attribution, in the browser (PDF → approved works) |
-| M3 | 4–7 | Chat blends K-1, notes and research with citations; Excel round-trip; review packet |
+| M2 ✓ | 2, 3 | Synthetic K-1 PDF → approved → 1040 with attribution, in the browser |
+| M3 | 4 ✓, 5 ✓, 6, 7 | Chat blends K-1, notes and research with citations; Excel round-trip; review packet (chat + research work; live runs need keys) |
 | M4 | 8–9 | E-file dry run + operator page |
 | M5 | 10 | Public demo link + repo + video + case study |
 
@@ -168,6 +180,8 @@ Each phase ends with something runnable *and* meets its UX criteria from `planni
 | Q5 | Repo public from day one? | Private until M2, public at M5. Remote: `github.com/michaelrenwick-a11y/Drivkraft-tax` (private, created 2026-09-25) |
 
 ## Nice-to-haves
+- Live-key checks, once keys are on this machine: a Phase 4 chat session (first-token time, citation discipline) and a Phase 5 Bizora fast query (source parsing, cost). One `scripts/live-check.sh` that skips cleanly without keys.
+- Bizora also publishes an MCP server (Claude connector directory). Worth comparing with our `tax_research` wrapper: theirs gives Claude research directly, while ours adds the cost gate, per-case saving and citation refs.
 - Upstream issues for the OpenTax K-1 gaps in `planning/03` (list now concrete: unrouted 13/18/19, silent field stripping, 14A = 0, Box 11 per-code, SSTB/UBIA).
 - More synthetic K-1s to stress the bridge. Note that the upstream PDF runner only accepts its own synthetic PDF (source hash check), so new PDF samples need a different extraction entry point.
 - K-3 once upstream implements it.

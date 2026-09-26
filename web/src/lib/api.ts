@@ -321,3 +321,61 @@ export type Proposal = {
   resolved: string | null;
   note: string | null;
 };
+
+/* ── Research (Phase 5) ──────────────────────────────────────────────── */
+
+export type ResearchMode = "fast" | "deep";
+
+export type ResearchSummary = {
+  id: string;
+  case_id: string | null;
+  case_name: string | null;
+  question: string;
+  mode: ResearchMode;
+  cached: boolean;
+  cost_usd: number;
+  origin: "chat" | "mcp" | "http";
+  created: string;
+  citation_count: number;
+  preview?: string;
+};
+
+export type ResearchCitation = {
+  n: number;
+  ref: string;
+  label: string;
+  authority: "statute" | "regulation" | "irs_guidance" | "case_law" | "bizora_source" | string;
+  url: string | null;
+  snippet: string;
+};
+
+export type ResearchFull = ResearchSummary & {
+  answer: string;
+  steps: string[];
+  citations: ResearchCitation[];
+  related_boxes: { doc_id: string; partnership: string | null; path: string; label: string; ref: string; href: string }[];
+  note: string;
+};
+
+export type ResearchStatus = {
+  configured: boolean;
+  invite_required: boolean;
+  prices_usd: Record<ResearchMode, number>;
+  fix_hint: string | null;
+};
+
+export type ResearchListing = {
+  research: ResearchSummary[];
+  status: ResearchStatus;
+  cached_questions: { id: string; question: string; boxes: string[] }[];
+  total_cost_usd: number;
+};
+
+export type ResearchQuote = {
+  cached: boolean;
+  matched_question: string | null;
+  mode: ResearchMode;
+  cost_usd: number;
+  live_available: boolean;
+  invite_required: boolean;
+};

@@ -27,6 +27,7 @@ from .errors import ToolFailure
 from .tools import REGISTRY, ToolSpec, channel, load_all
 from .tools import cases as case_tools
 from .tools import k1 as k1_tools
+from .tools import research as research_tools
 
 HOST = os.environ.get("DRIVKRAFT_HOST", "127.0.0.1")
 PORT = int(os.environ.get("DRIVKRAFT_PORT", "8787"))
@@ -38,6 +39,8 @@ Start with list_cases. Reference cases are read-only; create_case + intake_k1 to
 Boxes are addressed by OTD paths (part_iii.box_1, part_iii.box_11.A, part_i.item_b).
 To answer "what on this K-1 isn't in the calculation?", call bridge_k1: every
 calculation_incomplete flag names a box OpenTax can't take, and not_in_calculation lists the amounts.
+For tax-law questions ("how is Box 9b taxed?"), quote_research then tax_research: cached questions are
+free; live Bizora queries cost money, so confirm the price with the user first.
 Every response carries sources[]; cite them (e.g. "Box 13 A · Copperleaf")."""
 
 
@@ -106,6 +109,11 @@ def build_mcp():
                   description="The full disposition ledger: every OTD node and where it went.")
     def k1_ledger_resource(doc_id: str) -> str:
         return resource(k1_tools.bridge_k1, doc_id, include_ledger=True)
+
+    @mcp.resource("research://{research_id}", name="research", mime_type="application/json",
+                  description="A saved tax research answer with numbered citations to primary authority.")
+    def research_resource(research_id: str) -> str:
+        return resource(research_tools.get_research, research_id)
 
     @mcp.prompt(name="review_k1", title="Review a K-1",
                 description="Walk a K-1's errors and flags one by one, with the PDF evidence for each.")

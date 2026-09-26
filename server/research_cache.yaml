@@ -1,0 +1,126 @@
+# Demo research cache (Phase 5). Scripted questions answer from here, labeled "cached",
+# at no cost and without a Bizora key. These answers were WRITTEN FOR THIS PRACTICE BUILD
+# (not captured from Bizora) and cover the three engine gaps the bridge flags. Citation
+# snippets are summaries, not quotations; each links to the primary source.
+#
+# Matching: a question hits the cache when its words overlap an entry's question or an
+# alias closely enough (server/research.py, MATCH_THRESHOLD). Markers [n] point into citations.
+entries:
+  - id: box-9b-collectibles
+    question: How is a partner's collectibles gain from K-1 Box 9b taxed?
+    aliases:
+      - How are collectibles gains taxed?
+      - What rate applies to 28% rate gain on a K-1?
+      - Box 9b collectibles gain tax rate
+    related_boxes: [part_iii.box_9b]
+    answer: |
+      Net collectibles gain is taxed at a maximum rate of 28%, not the 15% or 20% rates that apply to other long-term capital gain [1]. Collectibles gain is gain on the sale of a collectible held more than one year, and "collectible" takes the §408(m) meaning: artwork, rugs, antiques, metals, gems, stamps, coins, alcoholic beverages and similar property [2][3].
+
+      A partnership reports the partner's share in Box 9b. That amount is already included in Box 9a, so it is not added again; it tells the partner how much of the 9a gain belongs in the 28% group [4]. On the 1040 it flows through the 28% Rate Gain Worksheet in the Schedule D instructions, whose result feeds the Schedule D Tax Worksheet [5].
+
+      Gain from selling a partnership interest can also be collectibles gain, to the extent it is attributable to unrealized appreciation in the partnership's collectibles [6].
+
+      In this app: OpenTax 2.0.4 fails when Box 9b is present, so the bridge holds 9b back as calculation_incomplete. The gain stays in 9a and is taxed at up to 20% instead of 28%, which understates tax on the collectibles portion.
+    citations:
+      - label: IRC §1(h)(4)
+        authority: statute
+        url: https://www.law.cornell.edu/uscode/text/26/1
+        snippet: Defines 28-percent rate gain as collectibles gain plus section 1202 gain, reduced by certain losses; §1(h)(1) taxes it at no more than 28%.
+      - label: IRC §1(h)(5)(A)
+        authority: statute
+        url: https://www.law.cornell.edu/uscode/text/26/1
+        snippet: Collectibles gain is gain from the sale or exchange of a collectible (per §408(m) without paragraph (3)) that is a capital asset held more than one year.
+      - label: IRC §408(m)(2)
+        authority: statute
+        url: https://www.law.cornell.edu/uscode/text/26/408
+        snippet: Lists collectibles such as works of art, rugs, antiques, metals, gems, stamps, coins and alcoholic beverages.
+      - label: Partner's Instructions for Schedule K-1 (Form 1065), Box 9b
+        authority: irs_guidance
+        url: https://www.irs.gov/instructions/i1065sk1
+        snippet: Box 9b shows the partner's share of collectibles (28%) gain, which is also included in Box 9a; report it on the 28% Rate Gain Worksheet.
+      - label: Instructions for Schedule D (Form 1040), 28% Rate Gain Worksheet
+        authority: irs_guidance
+        url: https://www.irs.gov/instructions/i1040sd
+        snippet: The worksheet totals collectibles and section 1202 gain; its result carries to the Schedule D Tax Worksheet.
+      - label: Treas. Reg. §1.1(h)-1(b)(2)
+        authority: regulation
+        url: https://www.law.cornell.edu/cfr/text/26/1.1(h)-1
+        snippet: On a sale of a partnership interest, the seller's collectibles gain is the share of gain the partnership would allocate from selling its collectibles at fair market value.
+
+  - id: box-13h-investment-interest
+    question: Is investment interest expense from K-1 Box 13 code H limited?
+    aliases:
+      - Is investment interest deductible in full?
+      - How is Box 13 H investment interest limited?
+      - Form 4952 investment interest limitation
+    related_boxes: [part_iii.box_13.H]
+    answer: |
+      Yes. An individual's deduction for investment interest is limited to net investment income for the year [1]. Interest disallowed by that limit is not lost: it carries forward and is treated as investment interest paid in the next year [2].
+
+      Net investment income is investment income (interest, nonqualified dividends, royalties and similar portfolio income) minus investment expenses [3]. Qualified dividends and net capital gain count only if the taxpayer elects to include them, and amounts elected in are then taxed at ordinary rates rather than the preferential capital gain rates [4].
+
+      The limit is computed on Form 4952, and the allowable amount is an itemized deduction on Schedule A line 9 [5]. A partner reports Box 13 code H on Form 4952 unless it relates to a trade or business activity or a passive activity, which follow other rules [6].
+
+      In this app: OpenTax has no Form 4952 input, so the bridge sends Box 13 H straight to Schedule A line 9 and flags investment_interest_unlimited. Check that net investment income covers the interest before relying on the deduction.
+    citations:
+      - label: IRC §163(d)(1)
+        authority: statute
+        url: https://www.law.cornell.edu/uscode/text/26/163
+        snippet: For a taxpayer other than a corporation, the investment interest deduction may not exceed net investment income for the taxable year.
+      - label: IRC §163(d)(2)
+        authority: statute
+        url: https://www.law.cornell.edu/uscode/text/26/163
+        snippet: Interest disallowed under paragraph (1) is treated as investment interest paid or accrued in the succeeding taxable year.
+      - label: IRC §163(d)(4)(A)
+        authority: statute
+        url: https://www.law.cornell.edu/uscode/text/26/163
+        snippet: Net investment income is the excess of investment income over investment expenses.
+      - label: IRC §163(d)(4)(B); IRC §1(h)(2)
+        authority: statute
+        url: https://www.law.cornell.edu/uscode/text/26/163
+        snippet: Net capital gain and qualified dividends are investment income only to the extent the taxpayer elects; elected amounts are removed from the preferential-rate computation.
+      - label: Instructions for Form 4952
+        authority: irs_guidance
+        url: https://www.irs.gov/forms-pubs/about-form-4952
+        snippet: Form 4952 figures the deductible investment interest and the amount carried forward; the deduction goes on Schedule A.
+      - label: Partner's Instructions for Schedule K-1 (Form 1065), Box 13 code H
+        authority: irs_guidance
+        url: https://www.irs.gov/instructions/i1065sk1
+        snippet: Code H is the partner's share of investment interest expense; report it on Form 4952 line 1 unless it relates to a trade, business or passive activity.
+
+  - id: box-20z-qbi
+    question: What does K-1 Box 20 code Z mean for the partner's section 199A deduction?
+    aliases:
+      - How does Box 20 Z affect the QBI deduction?
+      - What is section 199A information on a K-1?
+      - Box 20 Z qualified business income
+    related_boxes: [part_iii.box_20.Z]
+    answer: |
+      Box 20 code Z carries the partnership's section 199A information, which the partner uses to figure the qualified business income (QBI) deduction on their own return [1]. The deduction is generally up to 20% of the partner's QBI from each qualified trade or business [2].
+
+      The partnership doesn't take the deduction. As a relevant passthrough entity it must report, for each trade or business, the partner's share of QBI items, W-2 wages and the unadjusted basis of qualified property (UBIA), and whether the business is a specified service trade or business; this is usually on an attached statement [3]. The wage and UBIA figures matter once taxable income exceeds the threshold amount, where the deduction for each business is capped by a W-2 wage or wage-plus-UBIA limit [4].
+
+      Partners with income at or below the threshold usually use Form 8995; others use Form 8995-A, which applies the limits business by business [5].
+
+      In this app: the bridge sums QBI across §199A activities into one figure and flags multiple_199a_activities when the statement lists more than one, since separate limits may apply above the threshold.
+    citations:
+      - label: Partner's Instructions for Schedule K-1 (Form 1065), Box 20 code Z
+        authority: irs_guidance
+        url: https://www.irs.gov/instructions/i1065sk1
+        snippet: Code Z reports section 199A information (QBI items, W-2 wages, UBIA and SSTB status) for figuring the partner's QBI deduction.
+      - label: IRC §199A(a), (b)(1)
+        authority: statute
+        url: https://www.law.cornell.edu/uscode/text/26/199A
+        snippet: Allows a deduction based on 20% of qualified business income from each qualified trade or business, subject to limits.
+      - label: Treas. Reg. §1.199A-6(b)
+        authority: regulation
+        url: https://www.law.cornell.edu/cfr/text/26/1.199A-6
+        snippet: A relevant passthrough entity must determine and report each owner's share of QBI, W-2 wages, UBIA and SSTB status for each trade or business.
+      - label: IRC §199A(b)(2), (b)(3), (e)(2)
+        authority: statute
+        url: https://www.law.cornell.edu/uscode/text/26/199A
+        snippet: Above the threshold amount, each business's deduction is limited to the greater of 50% of W-2 wages or 25% of W-2 wages plus 2.5% of UBIA, phased in over a range.
+      - label: Instructions for Forms 8995 and 8995-A
+        authority: irs_guidance
+        url: https://www.irs.gov/forms-pubs/about-form-8995
+        snippet: Form 8995 is the simplified computation for taxpayers at or below the threshold; Form 8995-A applies the full limitations.

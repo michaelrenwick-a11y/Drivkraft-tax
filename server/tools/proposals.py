@@ -34,6 +34,8 @@ def source_href(ref: str) -> str | None:
         return f"/cases/{m[1]}/return?line={m[2]}"
     if ref.startswith("proposal://"):
         return "/inbox"
+    if m := re.fullmatch(r"research://([\w-]+)(?:/cite/(\d+))?", ref):
+        return f"/research?entry={m[1]}" + (f"#cite-{m[2]}" if m[2] else "")
     return None
 
 
@@ -50,6 +52,12 @@ def _citation(ref: str) -> dict:
     if m:
         from .returns import _line_source
         return {**_line_source(m[1], m[2]), "href": source_href(ref)}
+    m = re.fullmatch(r"research://([\w-]+)(?:/cite/(\d+))?", ref)
+    if m and (r := store.get_research(m[1])):
+        from .research import _sources
+        hit = next((s for s in _sources(r) if s["ref"] == ref), None)
+        if hit:
+            return {**hit, "href": source_href(ref)}
     return {"type": "other", "ref": ref, "label": ref, "href": None}
 
 

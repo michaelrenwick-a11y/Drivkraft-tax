@@ -82,6 +82,20 @@ CREATE TABLE IF NOT EXISTS proposals (
   created TEXT NOT NULL,
   resolved TEXT
 );
+CREATE TABLE IF NOT EXISTS research (
+  id TEXT PRIMARY KEY,
+  case_id TEXT REFERENCES cases(id),   -- null: not tied to a case
+  question TEXT NOT NULL,
+  mode TEXT NOT NULL,              -- fast | deep
+  answer TEXT NOT NULL,            -- markdown with [n] citation markers
+  citations TEXT NOT NULL,         -- JSON: [{label, authority, url, snippet}]
+  steps TEXT NOT NULL DEFAULT '[]',         -- JSON: Bizora's research steps
+  cached INTEGER NOT NULL,         -- 1: answered from the demo cache
+  cache_id TEXT,
+  cost_usd REAL NOT NULL,
+  origin TEXT NOT NULL,            -- mcp | http | chat
+  created TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS events (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   tool TEXT NOT NULL,
@@ -147,9 +161,11 @@ def _row(r: sqlite3.Row | None) -> dict | None:
     if r is None:
         return None
     d = dict(r)
-    for k in ("progress", "acknowledged", "old_value", "new_value", "data", "changes", "citations"):
+    for k in ("progress", "acknowledged", "old_value", "new_value", "data", "changes", "citations", "steps"):
         if k in d and isinstance(d[k], str):
             d[k] = json.loads(d[k])
+    if "cached" in d:
+        d["cached"] = bool(d["cached"])
     if "read_only" in d:
         d["read_only"] = bool(d["read_only"])
     return d
@@ -297,11 +313,40 @@ def update_proposal(proposal_id: str, **fields: Any) -> None:
         db.execute(f"UPDATE proposals SET {cols} WHERE id = :_id", {**fields, "_id": proposal_id})
 
 
+def insert_research(r: dict) -> dict:
+    row = {"case_id": None, "steps": [], "cache_id": None, "created": now(), **r}
+    with connect() as db:
+        db.execute("INSERT INTO research (id, case_id, question, mode, answer, citations, steps, cached, cache_id,"
+                   " cost_usd, origin, created) VALUES (:id, :case_id, :question, :mode, :answer, :citations, :steps,"
+                   " :cached, :cache_id, :cost_usd, :origin, :created)",
+                   {**row, "citations": json.dumps(row["citations"]), "steps": json.dumps(row["steps"]),
+                    "cached": int(row["cached"])})
+    return row
+
+
+def get_research(research_id: str) -> dict | None:
+    with connect() as db:
+        return _row(db.execute("SELECT * FROM research WHERE id = ?", (research_id,)).fetchone())
+
+
+def list_research(case_id: str | None = None) -> list[dict]:
+    sql, args = "SELECT * FROM research", []
+    if case_id:
+        sql, args = sql + " WHERE case_id = ?", [case_id]
+    with connect() as db:
+        return [_row(r) for r in db.execute(sql + " ORDER BY created DESC, rowid DESC", args)]
+
+
+def delete_research(research_id: str) -> bool:
+    with connect() as db:
+        return db.execute("DELETE FROM research WHERE id = ?", (research_id,)).rowcount > 0
+
+
 def reset() -> None:
     """Delete every case, document, edit, input, scenario and event, and the case folders.
     The caller re-seeds the reference cases."""
     with connect() as db:
-        for table in ("proposals", "edits", "inputs", "scenarios", "documents", "cases", "events"):
+        for table in ("research", "proposals", "edits", "inputs", "scenarios", "documents", "cases", "events"):
             db.execute(f"DELETE FROM {table}")
     shutil.rmtree(root() / "cases", ignore_errors=True)
 

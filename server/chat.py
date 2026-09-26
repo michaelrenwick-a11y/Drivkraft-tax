@@ -37,7 +37,7 @@ MAX_RESULT_CHARS = 60_000
 FALLBACK_BETA = "server-side-fallback-2026-07-01"
 
 # run_scenario writes only when given a name; chat gets it without one.
-CHAT_TOOLS_EXTRA = {"run_scenario"}
+CHAT_TOOLS_EXTRA = {"run_scenario", "tax_research"}   # tax_research: cached answers only in chat
 
 SYSTEM = """You are the assistant inside Drivkraft Tax, a practice app that takes Schedule K-1s (Form 1065)
 from PDF to OTD (Open Tax Document) data to an OpenTax 1040 calculation. All data is synthetic.
@@ -53,6 +53,10 @@ How to work:
 - You cannot edit anything. If the evidence shows a K-1 value is wrong, call propose_edit: it lands in the
   Inbox as a proposal a person accepts or rejects. Say that it's a proposal, not a change. Reference cases are
   read-only, so proposals only work on the user's own cases.
+- For tax-law questions (how a box is taxed, whether a deduction is limited), call tax_research with the
+  case_id. In chat it only returns cached answers; if it says live research is needed, tell the user to run
+  it on the Research page (it costs money) rather than answering from memory. Summarize the answer briefly,
+  citing its research://…/cite/n refs, and mention that the answer was saved.
 
 Citations (required):
 - Every tool result has sources[] entries like {"ref": "k1://ref-proof/box/part_iii.box_1", "label": ...}.
@@ -67,18 +71,7 @@ Use short bullet lists for breakdowns. No headings for answers under ~8 lines.""
 
 # ── Configuration ─────────────────────────────────────────────────────────
 
-def _load_env() -> None:
-    """Read <repo>/.env (gitignored) once: ANTHROPIC_API_KEY, DRIVKRAFT_CHAT_MODEL, DRIVKRAFT_CHAT_EFFORT."""
-    env = Path(paths.ROOT) / ".env"
-    if not env.exists():
-        return
-    for line in env.read_text(encoding="utf-8").splitlines():
-        m = re.match(r"\s*(?:export\s+)?([A-Z_][A-Z0-9_]*)\s*=\s*(.*?)\s*$", line)
-        if m and not line.lstrip().startswith("#"):
-            os.environ.setdefault(m[1], m[2].strip("'\""))
-
-
-_load_env()
+paths.load_env()
 
 
 def model() -> str:
@@ -112,6 +105,9 @@ async def anthropic_tools(mcp) -> list[dict]:
         schema = json.loads(json.dumps(t.input_schema))
         if t.name == "run_scenario":
             schema.get("properties", {}).pop("name", None)
+        if t.name == "tax_research":      # live, billed queries need a person on the Research page
+            for k in ("confirm_cost_usd", "invite_code"):
+                schema.get("properties", {}).pop(k, None)
         out.append({"name": t.name, "description": t.description or t.title or t.name,
                     "input_schema": schema, "eager_input_streaming": True})
     out.sort(key=lambda t: t["name"])      # stable order keeps the prompt cache warm
@@ -134,6 +130,8 @@ def step_label(name: str, args: dict) -> str:
         "get_return_lines": "Reading 1040 lines", "explain_line": f"Explaining line {args['line']}" if args.get("line") else "Explaining a line",
         "run_scenario": "Running a what-if", "list_scenarios": "Listing saved scenarios",
         "propose_edit": f"Proposing an edit to {where}" if where else "Proposing an edit", "list_proposals": "Checking the Inbox",
+        "tax_research": "Researching the tax question", "quote_research": "Checking the research cost",
+        "list_research": "Listing saved research", "get_research": "Reading saved research",
     }
     spec = REGISTRY.get(name)
     return labels.get(name) or (spec.title if spec else name)

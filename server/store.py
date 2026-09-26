@@ -124,6 +124,26 @@ CREATE TABLE IF NOT EXISTS research (
   origin TEXT NOT NULL,            -- mcp | http | chat
   created TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS outputs (
+  id TEXT PRIMARY KEY,
+  case_id TEXT NOT NULL REFERENCES cases(id),
+  kind TEXT NOT NULL,              -- workpaper | packet
+  version INTEGER NOT NULL,        -- per case and kind: v1, v2…
+  file TEXT NOT NULL,              -- path under the case folder
+  meta TEXT NOT NULL DEFAULT '{}', -- JSON: counts, fingerprint, sections
+  created TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS changesets (
+  id TEXT PRIMARY KEY,
+  case_id TEXT NOT NULL REFERENCES cases(id),
+  workpaper_id TEXT NOT NULL,      -- the export the workbook came from
+  filename TEXT,
+  status TEXT NOT NULL,            -- pending | applied | discarded
+  items TEXT NOT NULL,             -- JSON: cell-level changes (server/workpaper.py)
+  warnings TEXT NOT NULL DEFAULT '[]',
+  created TEXT NOT NULL,
+  resolved TEXT
+);
 CREATE TABLE IF NOT EXISTS events (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   tool TEXT NOT NULL,
@@ -205,7 +225,7 @@ def _row(r: sqlite3.Row | None) -> dict | None:
         return None
     d = dict(r)
     for k in ("progress", "acknowledged", "old_value", "new_value", "data", "changes", "citations", "steps",
-              "payload", "result", "attendees", "segments", "analysis"):
+              "payload", "result", "attendees", "segments", "analysis", "meta", "items", "warnings"):
         if k in d and isinstance(d[k], str):
             d[k] = json.loads(d[k])
     if "cached" in d:
@@ -470,11 +490,68 @@ def delete_checklist(item_id: str) -> bool:
         return db.execute("DELETE FROM checklist WHERE id = ?", (item_id,)).rowcount > 0
 
 
+def insert_output(o: dict) -> dict:
+    row = {"meta": {}, "created": now(), **o}
+    with connect() as db:
+        row["version"] = db.execute("SELECT COALESCE(MAX(version), 0) + 1 FROM outputs WHERE case_id = ? AND kind = ?",
+                                    (row["case_id"], row["kind"])).fetchone()[0]
+        db.execute("INSERT INTO outputs (id, case_id, kind, version, file, meta, created) VALUES (:id, :case_id, :kind,"
+                   " :version, :file, :meta, :created)", {**row, "meta": json.dumps(row["meta"])})
+    return row
+
+
+def get_output(output_id: str) -> dict | None:
+    with connect() as db:
+        return _row(db.execute("SELECT * FROM outputs WHERE id = ?", (output_id,)).fetchone())
+
+
+def list_outputs(case_id: str, kind: str | None = None) -> list[dict]:
+    sql, args = "SELECT * FROM outputs WHERE case_id = ?", [case_id]
+    if kind:
+        sql, args = sql + " AND kind = ?", [*args, kind]
+    with connect() as db:
+        return [_row(r) for r in db.execute(sql + " ORDER BY created DESC, version DESC", args)]
+
+
+def update_output(output_id: str, file: str, meta: dict) -> None:
+    with connect() as db:
+        db.execute("UPDATE outputs SET file = ?, meta = ? WHERE id = ?", (file, json.dumps(meta), output_id))
+
+
+def insert_changeset(c: dict) -> dict:
+    row = {"filename": None, "status": "pending", "warnings": [], "created": now(), "resolved": None, **c}
+    with connect() as db:
+        db.execute("INSERT INTO changesets (id, case_id, workpaper_id, filename, status, items, warnings, created,"
+                   " resolved) VALUES (:id, :case_id, :workpaper_id, :filename, :status, :items, :warnings, :created,"
+                   " :resolved)", {**row, "items": json.dumps(row["items"]), "warnings": json.dumps(row["warnings"])})
+    return row
+
+
+def get_changeset(changeset_id: str) -> dict | None:
+    with connect() as db:
+        return _row(db.execute("SELECT * FROM changesets WHERE id = ?", (changeset_id,)).fetchone())
+
+
+def list_changesets(case_id: str) -> list[dict]:
+    with connect() as db:
+        return [_row(r) for r in db.execute("SELECT * FROM changesets WHERE case_id = ? ORDER BY created DESC, rowid DESC",
+                                            (case_id,))]
+
+
+def update_changeset(changeset_id: str, **fields: Any) -> None:
+    for k in ("items", "warnings"):
+        if k in fields:
+            fields[k] = json.dumps(fields[k])
+    cols = ", ".join(f"{k} = :{k}" for k in fields)
+    with connect() as db:
+        db.execute(f"UPDATE changesets SET {cols} WHERE id = :_id", {**fields, "_id": changeset_id})
+
+
 def reset() -> None:
     """Delete every case, document, edit, input, scenario, note and event, and the case folders.
     The caller re-seeds the reference cases."""
     with connect() as db:
-        for table in ("checklist", "notes", "research", "proposals", "edits", "inputs", "scenarios", "documents", "cases", "events"):
+        for table in ("changesets", "outputs", "checklist", "notes", "research", "proposals", "edits", "inputs", "scenarios", "documents", "cases", "events"):
             db.execute(f"DELETE FROM {table}")
     shutil.rmtree(root() / "cases", ignore_errors=True)
 

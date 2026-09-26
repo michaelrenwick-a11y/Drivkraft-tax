@@ -16,6 +16,8 @@ dependencies = [
     "ruamel.yaml==0.19.1",
     "simplejson==4.1.2",
     "anthropic>=1,<2",
+    "openpyxl>=3.1.5",
+    "fpdf2>=2.8.8",
 ]
 
 [dependency-groups]
@@ -36,6 +38,7 @@ include = ["server*"]
 
 [tool.setuptools.package-data]
 "server.bridge" = ["mapping.yaml"]
+"server" = ["fonts/*.ttf", "fonts/OFL.txt", "*.yaml"]
 
 [tool.pytest.ini_options]
 testpaths = ["server/tests"]

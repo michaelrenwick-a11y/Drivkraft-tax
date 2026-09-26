@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, BookOpen, Calculator, Check, ChevronLeft, Clock, FileCode2, FilePlus2, FileText, Lock, NotebookPen } from "lucide-react";
+import { ArrowRight, BookOpen, FolderDown, Calculator, Check, ChevronLeft, Clock, FileCode2, FilePlus2, FileText, Lock, NotebookPen } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -109,6 +109,10 @@ export function CaseView({ caseId, openAdd }: { caseId: string; openAdd: boolean
           <Button variant="ghost" onClick={() => router.push(`/research?case=${caseId}`)}>
             <BookOpen className="size-4" aria-hidden />
             Research
+          </Button>
+          <Button variant="ghost" onClick={() => router.push(`/cases/${caseId}/outputs`)}>
+            <FolderDown className="size-4" aria-hidden />
+            Outputs
           </Button>
           {!c.read_only && documents.length > 0 && (
             <Button onClick={() => setAddOpen(true)}>

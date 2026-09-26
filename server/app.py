@@ -28,6 +28,7 @@ from .tools import REGISTRY, ToolSpec, channel, load_all
 from .tools import cases as case_tools
 from .tools import k1 as k1_tools
 from .tools import notes as note_tools
+from .tools import outputs as output_tools
 from .tools import research as research_tools
 
 HOST = os.environ.get("DRIVKRAFT_HOST", "127.0.0.1")
@@ -44,6 +45,8 @@ For tax-law questions ("how is Box 9b taxed?"), quote_research then tax_research
 free; live Bizora queries cost money, so confirm the price with the user first.
 Meeting notes: add_note (or sample="rivera-planning"), then analyze_meeting turns the note into proposals
 (document requests, scenarios, research questions, a follow-up draft) that a person accepts in the Inbox.
+Outputs: export_workpaper (Excel; yellow cells are editable), import_workpaper (a changeset of changed cells,
+conflicts marked; nothing applied yet), apply_changeset(accept_ids) after the user decides; build_review_packet (PDF).
 Every response carries sources[]; cite them (e.g. "Box 13 A · Copperleaf")."""
 
 
@@ -122,6 +125,17 @@ def build_mcp():
                   description="A meeting note with timed segments, its analysis and the proposals it made.")
     def note_resource(note_id: str) -> str:
         return resource(note_tools.get_note, note_id)
+
+    @mcp.resource("workpaper://{case_id}/v{version}", name="workpaper", mime_type="application/json",
+                  description="An exported Excel workpaper: version, sheets, editable cells and its download url.")
+    def workpaper_resource(case_id: str, version: str) -> str:
+        def find():
+            hit = next((o for o in output_tools.list_outputs(case_id)["workpapers"] if str(o["version"]) == version), None)
+            if hit is None:
+                raise ToolFailure("output_not_found", f"No workpaper v{version} on {case_id}",
+                                  "export_workpaper makes one; list_outputs lists them.", status=404)
+            return hit
+        return resource(find)
 
     @mcp.prompt(name="review_k1", title="Review a K-1",
                 description="Walk a K-1's errors and flags one by one, with the PDF evidence for each.")
@@ -259,6 +273,18 @@ def build_http():
             raise ToolFailure("no_pdf", "This K-1 has no source PDF", "OTD samples have no pages to show.", status=404)
         png = k1doc.render_page(pdf, page, ddir / "pages")
         return FileResponse(png, media_type="image/png", headers={"Cache-Control": "public, max-age=86400, immutable"})
+
+    @app.get("/api/outputs/{output_id}/download")
+    def download_output(output_id: str, inline: bool = False):
+        o = output_tools.require_output(output_id)
+        path = store.case_dir(o["case_id"]) / o["file"]
+        if not o["file"] or not path.exists():
+            raise ToolFailure("file_missing", "The file for this output is missing", "Export or build it again.", status=404)
+        media = ("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" if o["kind"] == "workpaper"
+                 else "application/pdf")
+        inline = inline and o["kind"] == "packet"     # ?inline=1 opens a packet in the browser's PDF viewer
+        return FileResponse(path, media_type=media, filename=output_tools.filename(o),
+                            content_disposition_type="inline" if inline else "attachment")
 
     app.router.routes.extend(r for r in mcp_app.routes)
     return app

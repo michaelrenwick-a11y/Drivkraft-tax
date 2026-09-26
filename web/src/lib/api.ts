@@ -460,3 +460,66 @@ export type ResearchQuote = {
   live_available: boolean;
   invite_required: boolean;
 };
+
+/* ── Outputs (Phase 7) ────────────────────────────────────────────────── */
+
+export type OutputFile = {
+  id: string;
+  case_id: string;
+  kind: "workpaper" | "packet";
+  version: number;
+  created: string;
+  filename: string;
+  url: string;
+  bytes: number | null;
+  sheets?: string[];
+  editable_cells?: number;
+  pages?: number;
+  sections?: string[];
+};
+
+export type ChangeItem = {
+  id: string;
+  sheet: string;
+  cell: string;
+  kind: "k1_value" | "checklist_status";
+  label: string;
+  box: string;
+  partnership: string | null;
+  doc_id?: string;
+  path?: string;
+  checklist_id?: string;
+  baseline: unknown;
+  current: unknown;
+  new: unknown;
+  conflict: boolean;
+  invalid: string | null;
+  returns_to_review: boolean;
+  ref: string | null;
+  status: "pending" | "applied" | "failed" | "rejected";
+  error?: string;
+  edit_id?: number;
+};
+
+export type ChangesetCounts = { changes: number; conflicts: number; invalid: number; applied: number; failed: number; rejected: number };
+
+export type Changeset = {
+  id: string;
+  case_id: string;
+  workpaper_id: string;
+  filename: string | null;
+  status: "pending" | "applied" | "discarded";
+  items: ChangeItem[];
+  warnings: string[];
+  created: string;
+  resolved: string | null;
+  workpaper: { id: string; version: number; created: string } | null;
+  latest_version: number | null;
+  counts: ChangesetCounts;
+};
+
+export type OutputsListing = {
+  workpapers: OutputFile[];
+  packets: OutputFile[];
+  changesets: Omit<Changeset, "items">[];
+};

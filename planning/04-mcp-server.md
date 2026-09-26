@@ -66,10 +66,12 @@ Legend: **R** read-only · **W** writes to the case · **$** costs money · **P*
 | | `delete_note(id)` | W | deleted id (pending proposals removed) |
 | | `list_checklist(case_id)` / `update_checklist_item(id, status)` | R / W | requested documents, open or received |
 | | `accept_proposal(proposal_id)` / `reject_proposal` / `undo_proposal` | W | result per kind (edit, checklist item, saved scenario, research or its Research-page link) |
-| Output | `export_workpaper(case_id)` | R | xlsx URL + version |
-| | `import_workpaper(case_id, xlsx)` | P | changeset with cell diffs + conflicts |
-| | `apply_changeset(changeset_id, accept_ids[])` | W | applied edits |
-| | `build_review_packet(case_id)` | R | PDF URL |
+| Output | `export_workpaper(case_id)` | W | xlsx URL + version (writes a file, not case data) |
+| | `import_workpaper(case_id, xlsx_base64, filename?)` | P | changeset with cell diffs + conflicts |
+| | `get_changeset(id)` / `discard_changeset(id)` | R / W | one import's cells and outcomes |
+| | `apply_changeset(changeset_id, accept_ids[], reason?)` | W | applied edits (reason names the cell) |
+| | `build_review_packet(case_id)` | W | PDF URL |
+| | `list_outputs(case_id)` | R | workpapers, packets, imports |
 | | `propose_edit(target, value, rationale, citations)` | P | proposal in the review queue |
 | E-file | `efile_export(case_id)` | R | MeF XML URL + hash |
 | | `efile_submit(case_id)` | W | submission id (FakeTransmitter only) |

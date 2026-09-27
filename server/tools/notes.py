@@ -271,6 +271,8 @@ def analyze_meeting(note_id: str, refresh: bool = False) -> dict:
             raise ToolFailure("analysis_not_configured", "Meeting analysis isn't configured",
                               "Add ANTHROPIC_API_KEY to drivkraft-tax/.env and restart, or load the sample note.",
                               status=501)
+        from .. import sandbox
+        sandbox.check_ai("analysis")      # demo: per-visitor limit and the monthly spending cap
         live = notes.analyze_live(note, case, store.list_documents(case["id"]))
         raw = {**live, "cached": False, "model": live.pop("_model", None), "usage": live.pop("_usage", None)}
         store.log_ai_usage("meeting_analysis", raw["model"], raw["usage"] or {}, note_id)

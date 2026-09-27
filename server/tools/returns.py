@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from .. import calc, engine, store
+from .. import calc, engine, store, visitor
 from ..errors import ToolFailure, not_found
 from . import tool
 from .cases import FILING_STATUSES, require_case
@@ -345,6 +345,8 @@ def run_scenario(case_id: str, changes: dict, name: str | None = None) -> dict:
         if abs(a - b) >= calc.TOLERANCE or k in HEADLINE:
             rows.append({"key": k, "line": meta["line"], "label": meta["label"], "section": meta["section"],
                          "base": b, "scenario": a, "delta": round(a - b, 2), "headline": k in HEADLINE})
+    if name and name.strip() and visitor.current.get() is not None:
+        require_case(case_id, writable=True)   # demo: reference cases are shared, so saves go to your own
     saved = store.insert_scenario(case_id, name.strip()[:80], changes) if name and name.strip() else None
     return {
         "case_id": case_id, "scenario": saved and {"id": saved["id"], "name": saved["name"]},

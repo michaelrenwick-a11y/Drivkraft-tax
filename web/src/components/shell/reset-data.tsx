@@ -4,15 +4,19 @@ import { RotateCcw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useUI } from "@/components/providers";
 import { Dialog } from "@/components/ui/dialog";
 import { api, ApiError } from "@/lib/api";
 
 /**
- * Sidebar footer action: wipe every case and re-seed the reference cases.
+ * Sidebar footer action: wipe every case and re-seed the reference cases (on the
+ * hosted demo: only this visitor's sandbox, re-seeded fresh).
  * Confirmed in a dialog; the server also requires {"confirm": "reset"}.
  */
 export function ResetData() {
   const router = useRouter();
+  const sandbox = Boolean(useUI().demo?.demo);
+  const label = sandbox ? "Reset my sandbox" : "Reset data";
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,13 +48,17 @@ export function ResetData() {
         className="flex h-8 w-full items-center gap-2 rounded-md px-2.5 text-xs font-medium text-sidebar-fg transition-colors hover:bg-sidebar-hover hover:text-sidebar-fg-active"
       >
         <RotateCcw className="size-3.5" strokeWidth={2} aria-hidden />
-        Reset data
+        {label}
       </button>
       <Dialog
         open={open}
         onOpenChange={(o) => !busy && setOpen(o)}
-        title="Reset all data?"
-        description="Deletes every case you've made, with its K-1s, edits, inputs and saved scenarios, plus the activity log. The read-only reference cases are rebuilt fresh."
+        title={sandbox ? "Reset your sandbox?" : "Reset all data?"}
+        description={
+          sandbox
+            ? "Deletes the cases in your sandbox, with everything you've changed in them, and brings back the three demo cases as they started. Other visitors aren't affected."
+            : "Deletes every case you've made, with its K-1s, edits, inputs and saved scenarios, plus the activity log. The read-only reference cases are rebuilt fresh."
+        }
         footer={
           <>
             <Button onClick={() => setOpen(false)} disabled={busy}>
@@ -63,7 +71,7 @@ export function ResetData() {
               autoFocus
             >
               <RotateCcw className="size-4" aria-hidden />
-              {busy ? "Resetting…" : "Reset data"}
+              {busy ? "Resetting…" : label}
             </Button>
           </>
         }

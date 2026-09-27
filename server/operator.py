@@ -251,6 +251,31 @@ def smoke() -> dict | None:
             if runs[-1].is_relative_to(paths.ROOT) else str(runs[-1].parent)}
 
 
+def visitors() -> dict:
+    from . import sandbox
+    from datetime import datetime, timedelta, timezone
+
+    def since(days: int) -> str:
+        return (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    web = "kind = 'web'"
+    one = lambda sql, *a: store.query(sql, a)[0]["n"]      # noqa: E731
+    stamp = store.root() / "last_reset"
+    return {
+        "tracked": True, "demo": sandbox.enabled(),
+        "total": one(f"SELECT COUNT(*) AS n FROM visitors WHERE {web}"),
+        "new_24h": one(f"SELECT COUNT(*) AS n FROM visitors WHERE {web} AND created >= ?", since(1)),
+        "active_24h": one(f"SELECT COUNT(*) AS n FROM visitors WHERE {web} AND last_seen >= ?", since(1)),
+        "active_7d": one(f"SELECT COUNT(*) AS n FROM visitors WHERE {web} AND last_seen >= ?", since(7)),
+        "requests": one(f"SELECT COALESCE(SUM(requests), 0) AS n FROM visitors WHERE {web}"),
+        "mcp_requests": one("SELECT COALESCE(SUM(requests), 0) AS n FROM visitors WHERE kind = 'mcp'"),
+        "pool_ready": one("SELECT COUNT(*) AS n FROM visitors WHERE kind = 'pool' AND seeded = 1"),
+        "month_spend_usd": sandbox.month_spend_usd(),
+        "monthly_cap_usd": sandbox.monthly_cap_usd() if sandbox.enabled() else None,
+        "last_reset": stamp.read_text().strip() if stamp.exists() else None,
+    }
+
+
 def gather() -> dict:
     return {
         "generated": store.now(),
@@ -261,5 +286,5 @@ def gather() -> dict:
         "efile": efile(),
         "upstream": upstream(),
         "smoke": smoke(),
-        "visitors": {"tracked": False, "note": "Demo sandboxes arrive with demo mode (Phase 10)."},
+        "visitors": visitors(),
     }

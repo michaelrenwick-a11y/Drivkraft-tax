@@ -1,6 +1,6 @@
 # Drivkraft Tax — Practice Build Plan
 
-> v7 (2026-09-26; Phases 0–6 done). **A personal practice project and portfolio piece** built on the Open Tax Technology Alliance's open code: the OTD K-1 standard (`opentaxdocument/otd-spec`) and the OpenTax 1040 engine (`filedcom/opentax`). It is not a product. It's fully separate from the Drivkraft platform (no shared code, database or accounts) and borrows only Drivkraft's visual design as a starting point.
+> v8 (2026-09-26; Phases 0–9 done, Phase 10 built). **A personal practice project and portfolio piece** built on the Open Tax Technology Alliance's open code: the OTD K-1 standard (`opentaxdocument/otd-spec`) and the OpenTax 1040 engine (`filedcom/opentax`). It is not a product. It's fully separate from the Drivkraft platform (no shared code, database or accounts) and borrows only Drivkraft's visual design as a starting point.
 
 ## Charter
 
@@ -157,7 +157,7 @@ Each phase ends with something runnable *and* meets its UX criteria from `planni
 - Carried from Phase 5: Bizora spend is `SUM(research.cost_usd)` (cached rows are $0), split cached vs live and by mode. The `events` table has no cost column, so either add one or join `research`; chat's Anthropic cost needs token usage logged per turn (not stored yet).
 - *Result:* `server/operator.py` + one read-only tool, `get_operator_stats` (`GET /api/operator`, ~0.8 s, most of it the `opentax version` and git subprocesses). New table **`ai_usage`** (kind, model, input/output/cache-read/cache-write tokens, estimated cost, ref, ok): every live chat turn logs one row (tokens summed over its steps, the model that actually served it after any fallback), every live `analyze_meeting` logs one. **Kept across Reset data**, since it's the spend record Phase 10's monthly cap will read. `server/pricing.py` holds list prices per 1M tokens (as of 2026-06: Opus 5 $5/$25, Opus 5.5 $4/$20, Sonnet 5 $2/$10, Fable 5.1 $10/$50, Haiku 4.5 $1/$5; cache reads 0.1× input except Opus 5.5 $0.20 and Fable 5.1 $0.25; cache writes 1.25×); longest-prefix matching so `claude-opus-5-5` isn't priced as Opus 5; an unknown model logs a null cost and shows "unknown price". Sections: cases by status (user vs reference), K-1s by status and source, edits, median PDF extraction time; bridge flag and error codes and the boxes the ledger marks `unsupported` (plus `calculation_incomplete` boxes), read from each K-1's `bridge.json`; tool calls from `events` (totals, p50/p95 overall and per tool, per transport, a 14-day daily series with errors, the last 8 errors); Anthropic spend by kind and model with month-to-date, cached sample analyses; Bizora spend live vs cached by mode; whether each key is set (never the value); proposals by kind with accept rate and origin; e-file submissions by status, acceptance rate, reject codes and OpenTax engine-gap rules; upstream pins parsed from `scripts/bootstrap.sh` against `git rev-parse` of each vendor checkout and `opentax version`, plus package versions; the latest smoke run (`scripts/smoke.sh` now writes `data/smoke/<ts>/results.json` with per-check pass/fail and seconds). Demo visitors show "not tracked" until Phase 10 adds `visitors`. Web: `/operator` replaces the placeholder: 5 stat tiles; a 14-day stacked column chart (OK vs errors, per-day hover tooltip, legend, screen-reader table) whose blue/red pair per theme was run through the dataviz palette validator (light `#2563eb`/`#be123c`, dark `#3b82f6`/`#f43f5e`, as `--chart-calls`/`--chart-errors`); a per-tool latency table; single-series bar lists (value at the tip, zero draws nothing); cost, proposals and e-file tables; upstream pins with match icons; the smoke card. 91 tests (5 new, including chat usage logging through the fake client and a usage row surviving reset), smoke 5/5, eslint/tsc clean. Checked in Chrome: light and dark, hover tooltip, no console errors, Lighthouse accessibility 100, no horizontal overflow at 375 px. **Not yet checked:** a live chat turn's usage row with a real key (the fake client covers the logging path).
 
-### Phase 10 — Demo & share *(medium)*
+### Phase 10 — Demo & share *(medium)* · **Status: built 2026-09-26; deploy, video and public repo pending**
 - **Hosting:** web on Vercel; server (MCP + worker + opentax binary) as a container on Fly.io or Render.
 - **Demo mode:** 2–3 seeded synthetic cases (simple, K-1-heavy, and one with a rejection), a nightly reset, uploads limited to bundled synthetic PDFs, and a "synthetic data" banner.
 - **Guardrails:** per-visitor rate limits, a monthly Anthropic spending cap (or visitors enter their own key), cached Bizora answers, and an invite code for live research and the MCP endpoint.
@@ -166,6 +166,48 @@ Each phase ends with something runnable *and* meets its UX criteria from `planni
 - **Credits** page: OpenTax (AGPL, source link), OTD (CC BY), Bizora.
 - Carried from Phase 5: the research invite gate already exists (`DRIVKRAFT_INVITE_CODE`, checked by `tax_research`); reuse the same code for the MCP endpoint (Q4). Before going public, have the three cached answers in `server/research_cache.yaml` reviewed against their authorities (they're authored, not Bizora output), and make one real Bizora call to confirm the streamed `custom_data` placement the parser assumes.
 - Carried from Phase 6: reference cases are read-only, so notes and proposals need a writable case. Seed each visitor's sandbox with a Rivera case (Copperleaf K-1 approved, the sample call loaded) so the notes → Inbox flow is one click. Live `analyze_meeting` costs Anthropic tokens: put it behind the same spending cap/invite gate as chat. Run one live analysis with a real key before sharing, and have the cached Rivera analysis read over like the research answers.
+- *Result (build):* Demo mode is `DRIVKRAFT_DEMO=1` (`server/sandbox.py`); local use is unchanged. **Visitors:**
+  - The web's `src/proxy.ts` (Next 16's middleware) sets a `dt_visitor` cookie on the first page load, so the page's parallel `/api` calls land in one sandbox. The server sets one for direct callers.
+  - `server/visitor.py` holds the current visitor (a contextvar). The store scopes by it: `cases.owner` and `research.owner` columns (migrated on start); `get_*` by id returns None for another visitor's rows, and list queries filter. A visitor sees the reference cases (owner NULL) plus their own. Unscoped (stdio, tests, local) sees everything.
+  - Saving a scenario on a shared reference case is refused in demo mode.
+  - Chat conversations carry their owner.
+
+  **Sandbox:**
+  - Three writable cases: Rivera (Copperleaf K-1 approved + `rivera-planning` loaded; the cached analysis makes 7 proposals); Chen (benchmark 82 inputs + Oak Ventures K-1, filer Mei Chen); Okafor (same shape, exported, approved, signed with a mistyped prior-year AGI and submitted, so it's rejected IND-031-04; the fix flow reaches Accepted).
+  - Benchmark 82's W-2 needed an employer address for MeF export (`W2_ADDRESS`).
+  - A seed takes ~4 s, so a pool (`DRIVKRAFT_POOL_SIZE`, default 3) is seeded ahead in a background thread, and a first visit claims one by changing the owner (0.2 s through the web proxy).
+  - The `visitors` table: web · mcp · pool, a seeded flag, requests, last_seen.
+
+  **Guardrails:**
+  - In-memory per-visitor rate limits: write 60/min, intake 6/h, chat 20/h, analysis 5/day; new sandboxes 20/h per client IP (first X-Forwarded-For hop). Plus `DRIVKRAFT_MAX_VISITORS` (300) new sandboxes a day.
+  - A monthly Anthropic cap (`DRIVKRAFT_MONTHLY_CAP_USD`, default $20) summed from `ai_usage`. It gates chat and live `analyze_meeting` (402 `spend_cap_reached`).
+  - A visitor's own key: the chat panel keeps it in sessionStorage and sends `x-anthropic-key` per turn. The server never stores it, and usage is logged as `chat_own_key`, outside the cap.
+  - `/mcp` needs `Authorization: Bearer <DRIVKRAFT_INVITE_CODE>` (401 otherwise; off without a code). Remote MCP shares the `mcp-invite` sandbox. `DRIVKRAFT_PUBLIC_HOSTS` feeds the MCP SDK's DNS-rebinding allowlist (without it the hosted `/mcp` answers 421).
+
+  **Resets:**
+  - Nightly reset at `DRIVKRAFT_RESET_HOUR_UTC` (8): wipes all cases, re-seeds the reference cases, and marks visitors for a fresh sandbox on their next request. Stamped in `data/last_reset`, checked every 10 min, including at startup.
+  - Sidebar "Reset my sandbox" resets only the caller's cases in demo mode (`store.delete_cases`).
+
+  **Web:**
+  - The demo banner (dismissible; states synthetic data and the nightly reset).
+  - The 6-step tour (`components/shell/tour.tsx`: cases → Copperleaf review → Exceptions → Rivera return → Rivera notes → Okafor e-file, resolved to the visitor's own case ids). It opens once for first-time demo visitors, and from the banner or ⌘K after that.
+  - The own-key form in chat.
+  - The operator "Demo visitors" card (active 24 h/7 d, new, requests, sandboxes ready, spend vs cap, last reset).
+  - Credits gains Bizora.
+
+  **Crash fixed:** concurrent PDFium use segfaulted the server (pool seeding and a synchronous seed both in `page_info`). All PDFium calls now run under one lock, and pages and bitmaps are closed inside it, since their finalizers otherwise run later in other threads and crash too. This affected local use as well. A stress script is clean ×3. `faulthandler` is on in `run_http`.
+
+  **Shareables:**
+  - `README.md` (Mermaid diagram, features, the OTD → OpenTax gap findings, local setup, Claude Desktop/Code for stdio and remote via `mcp-remote` with the bearer header).
+  - `docs/deploy.md` (Fly + Vercel steps and pre-share checks).
+  - `docs/video-script.md` (2 minutes, claims checked against the seed).
+  - Deploy config: `Dockerfile` (python 3.11-slim + uv; `bootstrap.sh` now takes `BOOTSTRAP_UV_ARGS`), `fly.toml` (ord, 1 GB, volume at /data, always-on single machine), `.dockerignore`, `.env.example` with the demo vars.
+
+  **Checks:** 102 tests (11 new in `test_demo.py`: scoping, seeds, notes → Inbox privacy, rate limits, cap and own key, pool claim, per-visitor and nightly reset, per-IP limit, HTTP cookie + `/mcp` gate); eslint/tsc clean. In Chrome, in demo mode: banner, tour through all 6 steps, own-key form, Okafor fix → Accepted, operator card, no console errors, no horizontal overflow at 375 px; Lighthouse accessibility 100 on `/cases` with the banner and tour showing.
+
+  **Not done (needs you):**
+  - Accounts and publishing: `fly` and `vercel` deploys (no docker, flyctl or Vercel login on this machine, so the Docker build is untested); making the repo public and picking a license; recording the video.
+  - Keys: the live-key checks listed above.
 
 ---
 

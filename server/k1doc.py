@@ -21,6 +21,7 @@ from __future__ import annotations
 import copy
 import json
 import re
+import threading
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
@@ -235,13 +236,24 @@ def evidence_for(evidence: dict, path: str) -> dict | None:
     return {**fields[box], "match": "box"} if box in fields else None
 
 
+# PDFium isn't thread-safe: two threads in it at once (page renders, demo sandbox
+# seeding in the background) crash the process. Every call goes through this lock,
+# and pages/bitmaps are closed inside it rather than left to the garbage collector.
+_PDFIUM = threading.Lock()
+
+
 def page_info(pdf: Path) -> dict:
     import pypdfium2 as pdfium
-    pdf_doc = pdfium.PdfDocument(str(pdf))
-    try:
-        sizes = [list(pdf_doc[i].get_size()) for i in range(len(pdf_doc))]
-    finally:
-        pdf_doc.close()
+    with _PDFIUM:
+        pdf_doc = pdfium.PdfDocument(str(pdf))
+        try:
+            sizes = []
+            for i in range(len(pdf_doc)):
+                pg = pdf_doc[i]
+                sizes.append(list(pg.get_size()))
+                pg.close()          # closed here, not by a finalizer in some other thread later
+        finally:
+            pdf_doc.close()
     return {"count": len(sizes), "sizes": sizes}
 
 
@@ -251,14 +263,19 @@ def render_page(pdf: Path, page: int, out_dir: Path) -> Path:
     if out.exists():
         return out
     import pypdfium2 as pdfium
-    pdf_doc = pdfium.PdfDocument(str(pdf))
-    try:
-        if not 1 <= page <= len(pdf_doc):
-            raise ToolFailure("page_out_of_range", f"Page {page} doesn't exist (the PDF has {len(pdf_doc)})",
-                              "Pages are numbered from 1.", status=404)
-        img = pdf_doc[page - 1].render(scale=PAGE_SCALE).to_pil()
-    finally:
-        pdf_doc.close()
+    with _PDFIUM:
+        pdf_doc = pdfium.PdfDocument(str(pdf))
+        try:
+            if not 1 <= page <= len(pdf_doc):
+                raise ToolFailure("page_out_of_range", f"Page {page} doesn't exist (the PDF has {len(pdf_doc)})",
+                                  "Pages are numbered from 1.", status=404)
+            pg = pdf_doc[page - 1]
+            bitmap = pg.render(scale=PAGE_SCALE)
+            img = bitmap.to_pil().copy()     # to_pil shares the bitmap's memory; copy before freeing it
+            bitmap.close()
+            pg.close()
+        finally:
+            pdf_doc.close()
     out_dir.mkdir(parents=True, exist_ok=True)
     tmp = out.with_suffix(".tmp.png")
     img.save(tmp, optimize=True)

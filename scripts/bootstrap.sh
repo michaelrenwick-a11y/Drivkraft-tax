@@ -54,6 +54,7 @@ log "$("$OPENTAX_BIN" version)"
 # Python venv via uv (fetches Python $PYTHON_VERSION if the system lacks it).
 command -v uv >/dev/null || die "uv is required: curl -LsSf https://astral.sh/uv/install.sh | sh"
 log "Syncing .venv (Python $PYTHON_VERSION) from pyproject.toml / uv.lock"
-(cd "$ROOT" && uv sync --quiet --python "$PYTHON_VERSION")
+# BOOTSTRAP_UV_ARGS overrides the sync flags (the Dockerfile uses --frozen --no-dev).
+(cd "$ROOT" && uv sync --quiet ${BOOTSTRAP_UV_ARGS:---python "$PYTHON_VERSION"})
 
 log "Done. Next: scripts/smoke.sh"

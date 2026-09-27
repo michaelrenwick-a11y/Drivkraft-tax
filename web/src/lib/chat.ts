@@ -36,12 +36,17 @@ export async function streamChat(
   body: { message: string; conversation_id: string | null; context: { path: string } },
   onEvent: (e: ChatEvent) => void,
   signal: AbortSignal,
+  apiKey?: string,
 ): Promise<void> {
   let res: Response;
   try {
     res = await fetch("/api/chat", {
       method: "POST",
-      headers: { "content-type": "application/json", accept: "text/event-stream" },
+      headers: {
+        "content-type": "application/json",
+        accept: "text/event-stream",
+        ...(apiKey ? { "x-anthropic-key": apiKey } : {}),
+      },
       body: JSON.stringify(body),
       signal,
     });

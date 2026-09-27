@@ -2,7 +2,7 @@
 
 import * as Dialog from "@radix-ui/react-dialog";
 import { Command } from "cmdk";
-import { CornerDownLeft, FilePlus2, FolderOpen, MessageSquare, Monitor, Moon, Search, Sun, type LucideIcon } from "lucide-react";
+import { Compass, CornerDownLeft, FilePlus2, FolderOpen, MessageSquare, Monitor, Moon, Search, Sun, type LucideIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { useUI } from "@/components/providers";
@@ -15,7 +15,7 @@ import { NAV } from "@/lib/nav";
  * here (Phase 2: new case, open case).
  */
 export function CommandPalette() {
-  const { paletteOpen, setPaletteOpen, setChatOpen, chatOpen, theme, setTheme, setNewCaseOpen } = useUI();
+  const { paletteOpen, setPaletteOpen, setChatOpen, chatOpen, theme, setTheme, setNewCaseOpen, setTourOpen } = useUI();
   const router = useRouter();
   const { data: cases } = useApi<{ cases: Case[] }>(paletteOpen ? "/cases" : null);
 
@@ -75,6 +75,9 @@ export function CommandPalette() {
               <Command.Group heading="Actions">
                 <Item icon={FilePlus2} keywords={["create", "client", "k-1"]} onSelect={() => run(() => setNewCaseOpen(true))}>
                   New case
+                </Item>
+                <Item icon={Compass} keywords={["tour", "guide", "walkthrough", "help"]} onSelect={() => run(() => setTourOpen(true))}>
+                  Take the tour
                 </Item>
                 <Item icon={MessageSquare} keywords={["assistant", "ask"]} onSelect={() => run(() => setChatOpen(!chatOpen))} trailing={<Shortcut keys="⌘J" />}>
                   {chatOpen ? "Close chat" : "Open chat"}

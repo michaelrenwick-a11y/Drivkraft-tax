@@ -287,16 +287,56 @@ export function OperatorView() {
           </Scroll>
           <div className="flex flex-col gap-4">
             <SmokeCard smoke={d.smoke} />
-            <div className="rounded-md border border-border bg-canvas p-3.5 text-sm">
-              <p className="flex items-center gap-2 font-medium text-fg">
-                <CircleSlash className="size-4 text-fg-subtle" aria-hidden />
-                Demo visitors
-              </p>
-              <p className="mt-1 text-fg-muted">Not tracked yet. {d.visitors.note}</p>
-            </div>
+            <VisitorsCard v={d.visitors} />
           </div>
         </div>
       </Section>
+    </div>
+  );
+}
+
+function VisitorsCard({ v }: { v: OperatorStats["visitors"] }) {
+  const usd = (n: number) => `$${n.toFixed(2)}`;
+  return (
+    <div className="rounded-md border border-border bg-canvas p-3.5 text-sm">
+      <p className="flex items-center gap-2 font-medium text-fg">
+        {v.demo ? (
+          <CheckCircle2 className="size-4 text-success-fg" aria-hidden />
+        ) : (
+          <CircleSlash className="size-4 text-fg-subtle" aria-hidden />
+        )}
+        Demo visitors
+      </p>
+      {v.demo ? (
+        <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+          <dt className="text-fg-muted">Active 24 h · 7 d</dt>
+          <dd className="text-right tabular-nums text-fg">
+            {v.active_24h} · {v.active_7d}
+          </dd>
+          <dt className="text-fg-muted">New 24 h · all time</dt>
+          <dd className="text-right tabular-nums text-fg">
+            {v.new_24h} · {v.total}
+          </dd>
+          <dt className="text-fg-muted">Web · MCP requests</dt>
+          <dd className="text-right tabular-nums text-fg">
+            {v.requests.toLocaleString()} · {v.mcp_requests.toLocaleString()}
+          </dd>
+          <dt className="text-fg-muted">Sandboxes ready</dt>
+          <dd className="text-right tabular-nums text-fg">{v.pool_ready}</dd>
+          <dt className="text-fg-muted">AI spend this month</dt>
+          <dd className="text-right tabular-nums text-fg">
+            {usd(v.month_spend_usd)}
+            {v.monthly_cap_usd != null && <span className="text-fg-muted"> of {usd(v.monthly_cap_usd)}</span>}
+          </dd>
+          <dt className="text-fg-muted">Last reset</dt>
+          <dd className="text-right tabular-nums text-fg">{v.last_reset ?? "—"}</dd>
+        </dl>
+      ) : (
+        <p className="mt-1 text-fg-muted">
+          Demo mode is off (local use). Set <code className="font-mono text-xs">DRIVKRAFT_DEMO=1</code> on the hosted
+          server for per-visitor sandboxes.
+        </p>
+      )}
     </div>
   );
 }

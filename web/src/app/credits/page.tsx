@@ -25,6 +25,15 @@ const UPSTREAM = [
     href: "https://github.com/opentaxdocument/otd-spec",
     linkLabel: "Specification",
   },
+  {
+    name: "Bizora",
+    by: "Bizora",
+    role: "Tax research API with citations to primary authority. Live queries need a key and an invite code; the demo answers three questions from a cache.",
+    license: "Commercial API",
+    pin: null,
+    href: "https://www.bizora.ai",
+    linkLabel: "Website",
+  },
 ];
 
 export default function CreditsPage() {
@@ -33,8 +42,9 @@ export default function CreditsPage() {
       <header>
         <h1 className="text-2xl font-semibold tracking-tight text-fg">Credits</h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-pretty text-fg-muted">
-          Built on open-source releases from Filed and Crimson Tree Software, part of the Open Tax Technology Alliance.
-          Drivkraft Tax is an independent practice project. It isn&apos;t affiliated with or endorsed by either project.
+          Built on open-source releases from Filed and Crimson Tree Software, part of the Open Tax Technology Alliance,
+          with research from Bizora. Drivkraft Tax is an independent practice project. It isn&apos;t affiliated with or
+          endorsed by any of them.
         </p>
       </header>
 
@@ -49,9 +59,11 @@ export default function CreditsPage() {
             <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs">
               <dl className="flex flex-wrap items-center gap-x-6 gap-y-2">
                 <Meta label="License">{u.license}</Meta>
-                <Meta label="Pinned">
-                  <span className="num">{u.pin}</span>
-                </Meta>
+                {u.pin && (
+                  <Meta label="Pinned">
+                    <span className="num">{u.pin}</span>
+                  </Meta>
+                )}
               </dl>
               <a
                 href={u.href}

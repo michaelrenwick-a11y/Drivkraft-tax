@@ -57,7 +57,7 @@ def test_stats_cover_every_section():
     assert next(r for r in ai["rows"] if r["model"] == "mystery-model")["unpriced"] == 1
     assert s["usage"]["bizora"]["cost_usd"] == 0
     assert {c["name"] for c in s["upstream"]["components"]} == {"OTD spec", "OpenTax source", "opentax binary"}
-    assert s["visitors"]["tracked"] is False
+    assert s["visitors"]["tracked"] is True and s["visitors"]["demo"] is False and s["visitors"]["total"] == 0
     json.dumps(s)   # the HTTP route serializes it
     assert doc["id"]
 

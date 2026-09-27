@@ -8,11 +8,14 @@ the events table; a ToolFailure becomes {code, message, fix_hint} on both.
 """
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import functools
 import inspect
 import json
 import os
+import re
+import secrets
 import time
 import typing
 from typing import Any
@@ -22,7 +25,7 @@ from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import TypeAdapter, ValidationError
 from starlette.concurrency import run_in_threadpool
 
-from . import chat, demo, efile, store
+from . import chat, demo, efile, sandbox, store, visitor
 from .errors import ToolFailure
 from .tools import REGISTRY, ToolSpec, channel, load_all
 from .tools import cases as case_tools
@@ -57,6 +60,8 @@ Every response carries sources[]; cite them (e.g. "Box 13 A · Copperleaf")."""
 def _call(spec: ToolSpec, transport: str, kwargs: dict) -> Any:
     t0 = time.perf_counter()
     try:
+        if spec.kind in ("W", "P"):
+            sandbox.check_rate("intake" if spec.name == "intake_k1" else "write")
         out = spec.fn(**kwargs)
     except ToolFailure as exc:
         store.log_event(spec.name, transport, (time.perf_counter() - t0) * 1000, False, exc.code)
@@ -82,10 +87,19 @@ def build_mcp():
         def make(spec: ToolSpec):
             @functools.wraps(spec.fn)
             def handler(**kwargs):
+                # Remote MCP sessions run outside the request's context, so in demo mode
+                # they get the shared invite sandbox; web chat calls keep their visitor.
+                token = visitor.current.set(sandbox.MCP_VISITOR) if (
+                    sandbox.enabled() and visitor.current.get() is None) else None
                 try:
+                    if token is not None:
+                        sandbox.ensure(sandbox.MCP_VISITOR, kind="mcp")
                     return _call(spec, channel.get(), kwargs)
                 except ToolFailure as exc:
                     raise ToolError(json.dumps(exc.to_dict(), ensure_ascii=False)) from exc
+                finally:
+                    if token is not None:
+                        visitor.current.reset(token)
             return handler
 
         mcp.tool(
@@ -161,14 +175,26 @@ def _params(fn) -> tuple[inspect.Signature, dict[str, Any]]:
 def build_http():
     load_all()
     mcp = build_mcp()
-    mcp_app = mcp.streamable_http_app(streamable_http_path="/mcp", host=HOST)
+    security = None
+    if public := os.environ.get("DRIVKRAFT_PUBLIC_HOSTS"):     # hosted: e.g. "drivkraft-tax.fly.dev"
+        from mcp.server.transport_security import TransportSecuritySettings
+        hosts = [h.strip() for h in public.split(",") if h.strip()]
+        security = TransportSecuritySettings(allowed_hosts=hosts + ["127.0.0.1:*", "localhost:*"],
+                                             allowed_origins=[f"https://{h}" for h in hosts])
+    mcp_app = mcp.streamable_http_app(streamable_http_path="/mcp", host=HOST, transport_security=security)
 
     @contextlib.asynccontextmanager
     async def lifespan(_app):
         store.root()      # default data dir unless already configured (tests)
         demo.seed()
+        nightly = None
+        if sandbox.enabled():
+            sandbox.refill_pool_async()
+            nightly = asyncio.create_task(sandbox.reset_loop())
         async with mcp.session_manager.run():
             yield
+        if nightly:
+            nightly.cancel()
 
     app = FastAPI(title="Drivkraft Tax", version="0.2.0", lifespan=lifespan, docs_url="/api/docs",
                   openapi_url="/api/openapi.json")
@@ -176,6 +202,45 @@ def build_http():
     @app.exception_handler(ToolFailure)
     async def tool_failure(_req, exc: ToolFailure):
         return JSONResponse({"error": exc.to_dict()}, status_code=exc.status)
+
+    @app.middleware("http")
+    async def demo_visitor(request: Request, call_next):
+        """Demo mode: /mcp needs the invite bearer token; /api runs as the cookie's visitor."""
+        if not sandbox.enabled():
+            return await call_next(request)
+        path = request.url.path
+        if path.startswith("/mcp"):
+            code = sandbox.invite_code()
+            auth = request.headers.get("authorization", "")
+            if code is None or not secrets.compare_digest(auth.encode(), f"Bearer {code}".encode()):
+                msg = ("The remote MCP endpoint needs an invite token" if code else
+                       "The remote MCP endpoint is off on this demo")
+                return JSONResponse({"error": {"code": "invite_required", "message": msg,
+                                               "fix_hint": "Send Authorization: Bearer <invite code>, or run the "
+                                                           "server locally (see the README)."}}, status_code=401)
+            return await call_next(request)
+        if not path.startswith("/api") or path == "/api/health":
+            return await call_next(request)
+        vid = request.cookies.get(sandbox.COOKIE, "")
+        fresh = not sandbox.VISITOR_ID.fullmatch(vid)
+        if fresh:
+            vid = sandbox.new_visitor_id()
+        try:
+            # Behind Vercel the first X-Forwarded-For hop is the browser; direct calls use the socket peer.
+            ip = (request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+                  or (request.client.host if request.client else None))
+            await run_in_threadpool(sandbox.ensure, vid, "web", ip)
+        except ToolFailure as exc:
+            return JSONResponse({"error": exc.to_dict()}, status_code=exc.status)
+        token = visitor.current.set(vid)
+        try:
+            response = await call_next(request)
+        finally:
+            visitor.current.reset(token)
+        if fresh:
+            response.set_cookie(sandbox.COOKIE, vid, max_age=60 * 60 * 24 * 30, httponly=True, samesite="lax",
+                                secure=request.headers.get("x-forwarded-proto", request.url.scheme) == "https")
+        return response
 
     def endpoint(spec: ToolSpec):
         sig, hints = _params(spec.fn)
@@ -232,6 +297,8 @@ def build_http():
             body = {}
         if not isinstance(body, dict) or body.get("confirm") != "reset":
             raise ToolFailure("confirm_required", "Reset needs confirmation", 'Send {"confirm": "reset"}.', status=400)
+        if sandbox.enabled():       # demo: only your own sandbox
+            return {"ok": True, "cases": await run_in_threadpool(sandbox.reset_visitor, visitor.current.get())}
         extracting = [d["id"] for c in store.list_cases() for d in store.list_documents(c["id"])
                       if d["status"] == "extracting"]
         if extracting:
@@ -244,6 +311,11 @@ def build_http():
     @app.get("/api/chat/status")
     def chat_status():
         return chat.status()
+
+    @app.get("/api/demo")
+    def demo_status():
+        """Demo mode, its limits and whether this month's AI budget is used up (the web's banner and chat panel)."""
+        return sandbox.status()
 
     @app.post("/api/chat")
     async def chat_turn(request: Request):
@@ -258,7 +330,11 @@ def build_http():
         if len(message) > 8000:
             raise ToolFailure("message_too_long", "Messages are limited to 8,000 characters", "Shorten it.", status=422)
         ctx = body.get("context") if isinstance(body.get("context"), dict) else {}
-        stream = chat.run_turn(mcp, message.strip(), body.get("conversation_id"), ctx.get("path"))
+        own_key = request.headers.get("x-anthropic-key", "").strip() or None   # used for this turn, never stored
+        if own_key and not re.fullmatch(r"sk-ant-[A-Za-z0-9_\-]{20,200}", own_key):
+            raise ToolFailure("bad_api_key", "That doesn't look like an Anthropic API key",
+                              "Keys start with sk-ant-. Remove it to use the demo's budget.", status=422)
+        stream = chat.run_turn(mcp, message.strip(), body.get("conversation_id"), ctx.get("path"), api_key=own_key)
         return StreamingResponse(stream, media_type="text/event-stream",
                                  headers={"Cache-Control": "no-cache, no-transform", "X-Accel-Buffering": "no"})
 
@@ -310,7 +386,9 @@ def run_stdio() -> None:
 
 
 def run_http() -> None:
+    import faulthandler
     import uvicorn
+    faulthandler.enable()     # a native crash (e.g. in PDFium) still leaves a Python traceback in the log
     uvicorn.run(build_http(), host=HOST, port=PORT, log_level="info")
 
 

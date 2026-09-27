@@ -23,7 +23,7 @@ from collections import OrderedDict
 from pathlib import Path
 from typing import Any, AsyncIterator
 
-from . import paths, store
+from . import paths, sandbox, store, visitor
 from .errors import ToolFailure
 from .tools import REGISTRY, channel
 from .tools.proposals import source_href
@@ -169,10 +169,11 @@ _conversations: OrderedDict[str, dict] = OrderedDict()
 
 
 def _conversation(cid: str | None) -> dict:
-    if cid and cid in _conversations:
+    owner = visitor.current.get()
+    if cid and cid in _conversations and _conversations[cid]["owner"] == owner:
         _conversations.move_to_end(cid)
         return _conversations[cid]
-    conv = {"id": store.new_id("chat"), "messages": [], "sources": {}}
+    conv = {"id": store.new_id("chat"), "messages": [], "sources": {}, "owner": owner}
     _conversations[conv["id"]] = conv
     while len(_conversations) > MAX_CONVERSATIONS:
         _conversations.popitem(last=False)
@@ -265,19 +266,24 @@ def _api_error(exc: Exception) -> dict:
     return {"code": "internal", "message": type(exc).__name__, "fix_hint": "Start a new chat and try again."}
 
 
-def make_client():
+def make_client(api_key: str | None = None):
     import anthropic
-    return anthropic.AsyncAnthropic()
+    return anthropic.AsyncAnthropic(api_key=api_key) if api_key else anthropic.AsyncAnthropic()
 
 
 async def run_turn(mcp, message: str, conversation_id: str | None, path: str | None,
-                   client=None) -> AsyncIterator[bytes]:
+                   client=None, api_key: str | None = None) -> AsyncIterator[bytes]:
     conv = _conversation(conversation_id)
     yield _sse("conversation", {"id": conv["id"], "model": model()})
-    if not configured() and client is None:
+    if not configured() and client is None and not api_key:
         yield _sse("error", {"code": "not_configured", "message": "Chat isn't configured", "fix_hint": status()["fix_hint"]})
         return
-    client = client or make_client()
+    try:
+        sandbox.check_ai("chat", own_key=bool(api_key))
+    except ToolFailure as exc:
+        yield _sse("error", exc.to_dict())
+        return
+    client = client or make_client(api_key)
     tools = await anthropic_tools(mcp)
     # Work on a copy; commit only at consistent points so a cancelled turn never
     # leaves a tool_use without its tool_result.
@@ -344,15 +350,19 @@ async def run_turn(mcp, message: str, conversation_id: str | None, path: str | N
         raise
     except Exception as exc:  # noqa: BLE001
         err = _api_error(exc)
+        if api_key and err["code"] == "auth":
+            err["fix_hint"] = "Check the key you added in the chat panel, or remove it to use the demo's budget."
         ok, err_code = False, err["code"]
         yield _sse("error", err)
     finally:
         store.log_event("chat", "chat", (time.perf_counter() - t0) * 1000, ok, err_code)
         if any(usage.values()):
-            store.log_ai_usage("chat", served_by, usage, conv["id"], ok)
+            store.log_ai_usage("chat_own_key" if api_key else "chat", served_by, usage, conv["id"], ok)
     yield _sse("done", {"usage": usage, "ms": round((time.perf_counter() - t0) * 1000)})
 
 
 def sources(conversation_id: str) -> dict:
     conv = _conversations.get(conversation_id)
+    if conv and conv["owner"] != visitor.current.get():
+        conv = None
     return {"sources": list((conv or {}).get("sources", {}).values())}

@@ -20,7 +20,7 @@ from .tools import k1 as k1tools
 BENCH_82 = paths.OPENTAX_BENCH / "82-single-w2-k1-1099r-1099int-1099div"
 
 
-def _seed_doc(case_id: str, doc_id: str, sample_id: str) -> None:
+def _seed_doc(case_id: str, doc_id: str, sample_id: str, note: str = "Seeded reference K-1") -> None:
     s = SAMPLES[sample_id]
     ddir = store.doc_dir(case_id, doc_id)
     ddir.mkdir(parents=True, exist_ok=True)
@@ -38,10 +38,17 @@ def _seed_doc(case_id: str, doc_id: str, sample_id: str) -> None:
     store.insert_document({"id": doc_id, "case_id": case_id, "kind": "k1", "sample": s.id, "source_kind": s.kind,
                            "label": s.title, "status": "extracting"})
     result = k1tools.refresh(doc_id)
-    acked = {k1tools.ack_key(f): {"note": "Seeded reference K-1", "at": store.now()}
+    acked = {k1tools.ack_key(f): {"note": note, "at": store.now()}
              for f in result["flags"] if f["code"] in k1tools.ACK_REQUIRED}
     shutil.copyfile(ddir / "current.otd.yaml", ddir / "approved.otd.yaml")
     store.update_document(doc_id, status="approved", approved_at=store.now(), acknowledged=acked)
+
+
+def bench_82_inputs() -> list[tuple[str, dict]]:
+    """Benchmark 82's non-K-1 forms (W-2, 1099-INT/DIV/R, start) as (node_type, data)."""
+    node = translator.mapping()["meta"]["opentax_node"]
+    case = json.loads((BENCH_82 / "input.json").read_text())
+    return [(f["node_type"], f["data"]) for f in case["forms"] if f["node_type"] != node]
 
 
 def seed() -> None:
@@ -61,8 +68,6 @@ def seed() -> None:
                            "filing_status": "single", "read_only": 1, "created": store.now(),
                            "description": "OpenTax benchmark 82 with its K-1 replaced by the OTD twin. "
                                           "calculate_return should match the benchmark within $5."})
-        node = translator.mapping()["meta"]["opentax_node"]
-        for f in case["forms"]:
-            if f["node_type"] != node:
-                store.insert_input("ref-bench-82", f["node_type"], f["data"], label="benchmark 82")
+        for node_type, data in bench_82_inputs():
+            store.insert_input("ref-bench-82", node_type, data, label="benchmark 82")
         _seed_doc("ref-bench-82", "ref-bench-82-oak", "oak-ventures")

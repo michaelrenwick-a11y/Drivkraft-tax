@@ -2,9 +2,11 @@ import type { ReactNode } from "react";
 import { NewCaseDialog } from "@/components/cases/new-case-dialog";
 import { ChatPanel } from "./chat-panel";
 import { CommandPalette } from "./command-palette";
+import { DemoBanner } from "./demo-banner";
 import { Header } from "./header";
 import { MobileNav } from "./mobile-nav";
 import { Sidebar } from "./sidebar";
+import { Tour } from "./tour";
 
 export function AppShell({ children }: { children: ReactNode }) {
   return (
@@ -18,6 +20,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <Sidebar />
       <MobileNav />
       <div className="flex min-w-0 flex-1 flex-col">
+        <DemoBanner />
         <Header />
         <main id="main" tabIndex={-1} className="flex-1 overflow-y-auto focus:outline-none">
           {children}
@@ -26,6 +29,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <ChatPanel />
       <CommandPalette />
       <NewCaseDialog />
+      <Tour />
     </div>
   );
 }

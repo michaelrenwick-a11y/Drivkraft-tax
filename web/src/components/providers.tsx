@@ -3,6 +3,7 @@
 import * as Tooltip from "@radix-ui/react-tooltip";
 import { createContext, useContext, useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { ToastProvider } from "@/components/ui/toast";
+import { api, type DemoStatus } from "@/lib/api";
 import { applyPreference, readPreference, subscribeTheme, type ThemePreference } from "@/lib/theme";
 
 type UIState = {
@@ -16,6 +17,10 @@ type UIState = {
   setNavOpen: (open: boolean) => void;
   newCaseOpen: boolean;
   setNewCaseOpen: (open: boolean) => void;
+  tourOpen: boolean;
+  setTourOpen: (open: boolean) => void;
+  /** Hosted demo status; null while loading or when the server is down (treated as local use). */
+  demo: DemoStatus | null;
 };
 
 const UIContext = createContext<UIState | null>(null);
@@ -34,6 +39,12 @@ export function Providers({ children }: { children: ReactNode }) {
   const [chatOpen, setChatOpen] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
   const [newCaseOpen, setNewCaseOpen] = useState(false);
+  const [tourOpen, setTourOpen] = useState(false);
+  const [demo, setDemo] = useState<DemoStatus | null>(null);
+
+  useEffect(() => {
+    api<DemoStatus>("/demo").then(setDemo, () => setDemo(null));
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -64,6 +75,9 @@ export function Providers({ children }: { children: ReactNode }) {
         setNavOpen,
         newCaseOpen,
         setNewCaseOpen,
+        tourOpen,
+        setTourOpen,
+        demo,
       }}
     >
       <Tooltip.Provider delayDuration={300}>

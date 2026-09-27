@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any, Iterator
 
 from . import paths
+from .visitor import current as _visitor
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS cases (
@@ -26,6 +27,7 @@ CREATE TABLE IF NOT EXISTS cases (
   filing_status TEXT NOT NULL,
   read_only INTEGER NOT NULL DEFAULT 0,
   description TEXT,
+  owner TEXT,                      -- demo visitor id; NULL: reference case or local use
   created TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS documents (
@@ -122,6 +124,7 @@ CREATE TABLE IF NOT EXISTS research (
   cache_id TEXT,
   cost_usd REAL NOT NULL,
   origin TEXT NOT NULL,            -- mcp | http | chat
+  owner TEXT,                      -- demo visitor id (research not tied to a case)
   created TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS outputs (
@@ -180,6 +183,14 @@ CREATE TABLE IF NOT EXISTS ai_usage (
   ok INTEGER NOT NULL,
   created TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS visitors (
+  id TEXT PRIMARY KEY,             -- demo visitor (cookie) or mcp-invite
+  kind TEXT NOT NULL,              -- web | mcp
+  seeded INTEGER NOT NULL DEFAULT 0,   -- 0 after a reset: the sandbox is re-seeded on the next request
+  requests INTEGER NOT NULL DEFAULT 0,
+  created TEXT NOT NULL,
+  last_seen TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS events (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   tool TEXT NOT NULL,
@@ -211,6 +222,9 @@ def configure(root: Path | None = None) -> Path:
     with connect() as db:
         _migrate_proposals(db)
         db.executescript(SCHEMA)
+        for table in ("cases", "research"):      # Phase 10: owner column on older databases
+            if "owner" not in {r[1] for r in db.execute(f"PRAGMA table_info({table})")}:
+                db.execute(f"ALTER TABLE {table} ADD COLUMN owner TEXT")
     return _root
 
 
@@ -272,29 +286,55 @@ def _row(r: sqlite3.Row | None) -> dict | None:
     return d
 
 
-def get_case(case_id: str) -> dict | None:
+# ── Visitor scope (demo mode) ─────────────────────────────────────────────
+# With a visitor set (server/visitor.py), a visitor sees the reference cases
+# (owner NULL) and their own; everything else behaves as if it didn't exist.
+
+VISIBLE = "(owner IS NULL OR owner = ?)"
+VISIBLE_CASE = f"case_id IN (SELECT id FROM cases WHERE {VISIBLE})"
+
+
+def visible_case(case_id: str | None) -> bool:
+    v = _visitor.get()
+    if v is None or case_id is None:
+        return True
     with connect() as db:
-        return _row(db.execute("SELECT * FROM cases WHERE id = ?", (case_id,)).fetchone())
+        return db.execute(f"SELECT 1 FROM cases WHERE id = ? AND {VISIBLE}", (case_id, v)).fetchone() is not None
+
+
+def _scoped(row: dict | None) -> dict | None:
+    return row if row is not None and visible_case(row.get("case_id")) else None
+
+
+def get_case(case_id: str) -> dict | None:
+    v = _visitor.get()
+    with connect() as db:
+        if v is None:
+            return _row(db.execute("SELECT * FROM cases WHERE id = ?", (case_id,)).fetchone())
+        return _row(db.execute(f"SELECT * FROM cases WHERE id = ? AND {VISIBLE}", (case_id, v)).fetchone())
 
 
 def list_cases() -> list[dict]:
+    v = _visitor.get()
+    where, args = (f" WHERE {VISIBLE}", (v,)) if v is not None else ("", ())
     with connect() as db:
-        return [_row(r) for r in db.execute("SELECT * FROM cases ORDER BY read_only DESC, created DESC")]
+        return [_row(r) for r in db.execute(f"SELECT * FROM cases{where} ORDER BY read_only DESC, created DESC", args)]
 
 
 def insert_case(case: dict) -> None:
     with connect() as db:
         db.execute(
-            "INSERT INTO cases (id, name, tax_year, filing_status, read_only, description, created)"
-            " VALUES (:id, :name, :tax_year, :filing_status, :read_only, :description, :created)",
-            {"description": None, "read_only": 0, **case},
+            "INSERT INTO cases (id, name, tax_year, filing_status, read_only, description, owner, created)"
+            " VALUES (:id, :name, :tax_year, :filing_status, :read_only, :description, :owner, :created)",
+            {"description": None, "read_only": 0, "owner": _visitor.get(), **case},
         )
     case_dir(case["id"]).mkdir(parents=True, exist_ok=True)
 
 
 def get_document(doc_id: str) -> dict | None:
     with connect() as db:
-        return _row(db.execute("SELECT * FROM documents WHERE id = ?", (doc_id,)).fetchone())
+        row = _row(db.execute("SELECT * FROM documents WHERE id = ?", (doc_id,)).fetchone())
+    return _scoped(row)
 
 
 def list_documents(case_id: str) -> list[dict]:
@@ -378,6 +418,8 @@ def list_scenarios(case_id: str) -> list[dict]:
 
 def delete_scenario(scenario_id: str) -> bool:
     with connect() as db:
+        if (v := _visitor.get()) is not None:
+            return db.execute(f"DELETE FROM scenarios WHERE id = ? AND {VISIBLE_CASE}", (scenario_id, v)).rowcount > 0
         return db.execute("DELETE FROM scenarios WHERE id = ?", (scenario_id,)).rowcount > 0
 
 
@@ -397,11 +439,14 @@ def insert_proposal(p: dict) -> dict:
 
 def get_proposal(proposal_id: str) -> dict | None:
     with connect() as db:
-        return _row(db.execute("SELECT * FROM proposals WHERE id = ?", (proposal_id,)).fetchone())
+        row = _row(db.execute("SELECT * FROM proposals WHERE id = ?", (proposal_id,)).fetchone())
+    return _scoped(row)
 
 
 def list_proposals(case_id: str | None = None, status: str | None = None, note_id: str | None = None) -> list[dict]:
     sql, args = "SELECT * FROM proposals WHERE 1=1", []
+    if (v := _visitor.get()) is not None:
+        sql, args = sql + f" AND {VISIBLE_CASE}", [v]
     if case_id:
         sql, args = sql + " AND case_id = ?", [*args, case_id]
     if note_id:
@@ -426,25 +471,38 @@ def delete_proposal(proposal_id: str) -> bool:
 
 
 def insert_research(r: dict) -> dict:
-    row = {"case_id": None, "steps": [], "cache_id": None, "created": now(), **r}
+    row = {"case_id": None, "steps": [], "cache_id": None, "created": now(), "owner": _visitor.get(), **r}
     with connect() as db:
         db.execute("INSERT INTO research (id, case_id, question, mode, answer, citations, steps, cached, cache_id,"
-                   " cost_usd, origin, created) VALUES (:id, :case_id, :question, :mode, :answer, :citations, :steps,"
-                   " :cached, :cache_id, :cost_usd, :origin, :created)",
+                   " cost_usd, origin, owner, created) VALUES (:id, :case_id, :question, :mode, :answer, :citations,"
+                   " :steps, :cached, :cache_id, :cost_usd, :origin, :owner, :created)",
                    {**row, "citations": json.dumps(row["citations"]), "steps": json.dumps(row["steps"]),
                     "cached": int(row["cached"])})
     return row
 
 
+def _research_visible(r: dict | None) -> dict | None:
+    v = _visitor.get()
+    if r is None or v is None:
+        return r
+    if r["case_id"] is None:
+        return r if r.get("owner") in (None, v) else None
+    return _scoped(r)
+
+
 def get_research(research_id: str) -> dict | None:
     with connect() as db:
-        return _row(db.execute("SELECT * FROM research WHERE id = ?", (research_id,)).fetchone())
+        row = _row(db.execute("SELECT * FROM research WHERE id = ?", (research_id,)).fetchone())
+    return _research_visible(row)
 
 
 def list_research(case_id: str | None = None) -> list[dict]:
-    sql, args = "SELECT * FROM research", []
+    sql, args = "SELECT * FROM research WHERE 1=1", []
     if case_id:
-        sql, args = sql + " WHERE case_id = ?", [case_id]
+        sql, args = sql + " AND case_id = ?", [case_id]
+    if (v := _visitor.get()) is not None:
+        sql += f" AND (({VISIBLE_CASE}) OR (case_id IS NULL AND {VISIBLE}))"
+        args += [v, v]
     with connect() as db:
         return [_row(r) for r in db.execute(sql + " ORDER BY created DESC, rowid DESC", args)]
 
@@ -468,13 +526,16 @@ def insert_note(n: dict) -> dict:
 
 def get_note(note_id: str) -> dict | None:
     with connect() as db:
-        return _row(db.execute("SELECT * FROM notes WHERE id = ?", (note_id,)).fetchone())
+        row = _row(db.execute("SELECT * FROM notes WHERE id = ?", (note_id,)).fetchone())
+    return _scoped(row)
 
 
 def list_notes(case_id: str | None = None) -> list[dict]:
-    sql, args = "SELECT * FROM notes", []
+    sql, args = "SELECT * FROM notes WHERE 1=1", []
     if case_id:
-        sql, args = sql + " WHERE case_id = ?", [case_id]
+        sql, args = sql + " AND case_id = ?", [case_id]
+    if (v := _visitor.get()) is not None:
+        sql, args = sql + f" AND {VISIBLE_CASE}", [*args, v]
     with connect() as db:
         return [_row(r) for r in db.execute(sql + " ORDER BY COALESCE(meeting_date, created) DESC, created DESC", args)]
 
@@ -506,7 +567,8 @@ def insert_checklist(item: dict) -> dict:
 
 def get_checklist_item(item_id: str) -> dict | None:
     with connect() as db:
-        return _row(db.execute("SELECT * FROM checklist WHERE id = ?", (item_id,)).fetchone())
+        row = _row(db.execute("SELECT * FROM checklist WHERE id = ?", (item_id,)).fetchone())
+    return _scoped(row)
 
 
 def list_checklist(case_id: str) -> list[dict]:
@@ -539,7 +601,8 @@ def insert_output(o: dict) -> dict:
 
 def get_output(output_id: str) -> dict | None:
     with connect() as db:
-        return _row(db.execute("SELECT * FROM outputs WHERE id = ?", (output_id,)).fetchone())
+        row = _row(db.execute("SELECT * FROM outputs WHERE id = ?", (output_id,)).fetchone())
+    return _scoped(row)
 
 
 def list_outputs(case_id: str, kind: str | None = None) -> list[dict]:
@@ -566,7 +629,8 @@ def insert_changeset(c: dict) -> dict:
 
 def get_changeset(changeset_id: str) -> dict | None:
     with connect() as db:
-        return _row(db.execute("SELECT * FROM changesets WHERE id = ?", (changeset_id,)).fetchone())
+        row = _row(db.execute("SELECT * FROM changesets WHERE id = ?", (changeset_id,)).fetchone())
+    return _scoped(row)
 
 
 def list_changesets(case_id: str) -> list[dict]:
@@ -601,7 +665,8 @@ def insert_filing(f: dict) -> dict:
 
 def get_filing(filing_id: str) -> dict | None:
     with connect() as db:
-        return _row(db.execute("SELECT * FROM filings WHERE id = ?", (filing_id,)).fetchone())
+        row = _row(db.execute("SELECT * FROM filings WHERE id = ?", (filing_id,)).fetchone())
+    return _scoped(row)
 
 
 def list_filings(case_id: str) -> list[dict]:
@@ -638,6 +703,21 @@ def reset() -> None:
         for table in ("filings", "efile_db", "changesets", "outputs", "checklist", "notes", "research", "proposals", "edits", "inputs", "scenarios", "documents", "cases", "events"):
             db.execute(f"DELETE FROM {table}")
     shutil.rmtree(root() / "cases", ignore_errors=True)
+
+
+def delete_cases(case_ids: list[str]) -> None:
+    """Delete these cases with everything under them (a demo visitor's sandbox reset)."""
+    if not case_ids:
+        return
+    marks = ",".join("?" * len(case_ids))
+    with connect() as db:
+        db.execute(f"DELETE FROM edits WHERE doc_id IN (SELECT id FROM documents WHERE case_id IN ({marks}))", case_ids)
+        for table in ("filings", "efile_db", "changesets", "outputs", "checklist", "notes", "research", "proposals",
+                      "inputs", "scenarios", "documents"):
+            db.execute(f"DELETE FROM {table} WHERE case_id IN ({marks})", case_ids)
+        db.execute(f"DELETE FROM cases WHERE id IN ({marks})", case_ids)
+    for cid in case_ids:
+        shutil.rmtree(case_dir(cid), ignore_errors=True)
 
 
 def log_ai_usage(kind: str, model: str | None, usage: dict, ref: str | None = None, ok: bool = True) -> None:

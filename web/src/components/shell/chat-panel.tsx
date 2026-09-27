@@ -1,15 +1,16 @@
 "use client";
 
-import { ArrowUp, Check, ChevronRight, CircleAlert, Loader2, MessageSquare, SquarePen, Square, X } from "lucide-react";
+import { ArrowUp, Check, ChevronRight, CircleAlert, KeyRound, Loader2, MessageSquare, SquarePen, Square, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { Fragment, useCallback, useEffect, useId, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useUI } from "@/components/providers";
 import { IconButton } from "@/components/ui/button";
 import { StatusPill } from "@/components/ui/status-pill";
 import { useApi } from "@/lib/api";
 import { streamChat, suggestions, type ChatError, type ChatEvent, type ChatSource, type ChatStatus, type Part } from "@/lib/chat";
 import { cn } from "@/lib/cn";
+import { looksLikeAnthropicKey, readOwnKey, setOwnKey, subscribeOwnKey } from "@/lib/demo";
 
 type Turn =
   | { role: "user"; text: string }
@@ -22,7 +23,8 @@ type Turn =
  * Stays mounted while closed so a conversation survives toggling the panel.
  */
 export function ChatPanel() {
-  const { chatOpen, setChatOpen } = useUI();
+  const { chatOpen, setChatOpen, demo } = useUI();
+  const ownKey = useSyncExternalStore(subscribeOwnKey, readOwnKey, () => "");
   const pathname = usePathname();
   const status = useApi<ChatStatus>(chatOpen ? "/chat/status" : null);
   const [turns, setTurns] = useState<Turn[]>([]);
@@ -114,11 +116,16 @@ export function ChatPanel() {
       setTurns((ts) => [...ts, { role: "user", text: message }, { role: "assistant", parts: [], status: "streaming" }]);
       const ctl = new AbortController();
       abort.current = ctl;
-      await streamChat({ message, conversation_id: conversation.current, context: { path: pathname } }, onEvent, ctl.signal);
+      await streamChat(
+        { message, conversation_id: conversation.current, context: { path: pathname } },
+        onEvent,
+        ctl.signal,
+        ownKey || undefined,
+      );
       update((t) => ({ ...t, status: ctl.signal.aborted ? "stopped" : "done" }));
       abort.current = null;
     },
-    [busy, pathname, onEvent, update],
+    [busy, pathname, onEvent, update, ownKey],
   );
 
   const stop = () => abort.current?.abort();
@@ -131,7 +138,8 @@ export function ChatPanel() {
     input.current?.focus();
   };
 
-  const configured = status.data?.configured ?? true;
+  const configured = (status.data?.configured ?? true) || Boolean(ownKey);
+  const capReached = Boolean(demo?.cap_reached) && !ownKey;
 
   return (
     <div hidden={!chatOpen} className="contents">
@@ -161,10 +169,23 @@ export function ChatPanel() {
             <div className="flex h-full flex-col items-center justify-center gap-3 px-8 text-center">
               <StatusPill kind="not-configured" />
               <p className="text-sm font-medium text-fg">Chat needs an Anthropic API key</p>
-              <p className="text-sm leading-6 text-fg-muted">{status.data?.fix_hint}</p>
+              {demo?.demo ? (
+                <>
+                  <p className="text-sm leading-6 text-fg-muted">This demo has no key of its own. Add yours to try chat.</p>
+                  <OwnKeyForm current={ownKey} />
+                </>
+              ) : (
+                <p className="text-sm leading-6 text-fg-muted">{status.data?.fix_hint}</p>
+              )}
             </div>
           ) : turns.length === 0 ? (
             <div className="flex h-full flex-col justify-end gap-4 p-4">
+              {capReached && (
+                <div className="rounded-md border border-warning-border bg-warning-bg p-3 text-sm text-warning-fg">
+                  <p className="font-medium">The demo&apos;s AI budget for this month is used up.</p>
+                  <p className="mt-1 leading-6">Add your own key below to keep chatting. Everything else still works.</p>
+                </div>
+              )}
               <div className="space-y-1.5">
                 <p className="text-sm font-medium text-fg">Ask about this screen</p>
                 <p className="text-sm leading-6 text-fg-muted">
@@ -240,8 +261,83 @@ export function ChatPanel() {
               </button>
             )}
           </div>
+          {demo?.demo && configured && (
+            <details className="group mt-2 text-xs text-fg-muted" open={capReached || undefined}>
+              <summary className="flex cursor-pointer list-none items-center gap-1.5 rounded px-1 py-0.5 hover:text-fg">
+                <KeyRound className="size-3.5" aria-hidden />
+                {ownKey ? "Using your own Anthropic key" : "Use your own Anthropic key"}
+                <ChevronRight className="size-3 transition-transform group-open:rotate-90" aria-hidden />
+              </summary>
+              <OwnKeyForm current={ownKey} />
+            </details>
+          )}
         </form>
       </aside>
+    </div>
+  );
+}
+
+/** Demo only: a visitor's own key, kept in this tab (sessionStorage) and sent per message. */
+function OwnKeyForm({ current }: { current: string }) {
+  const id = useId();
+  const [value, setValue] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  if (current) {
+    return (
+      <div className="mt-2 flex w-full items-center gap-2 text-left text-xs text-fg-muted">
+        <span className="min-w-0 flex-1 truncate font-mono">sk-ant-…{current.slice(-4)}</span>
+        <button type="button" onClick={() => setOwnKey("")} className="font-medium text-primary hover:underline">
+          Remove
+        </button>
+      </div>
+    );
+  }
+  return (
+    <div className="mt-2 w-full text-left">
+      <label htmlFor={id} className="sr-only">
+        Anthropic API key
+      </label>
+      <div className="flex gap-2">
+        <input
+          id={id}
+          type="password"
+          autoComplete="off"
+          spellCheck={false}
+          value={value}
+          onChange={(e) => {
+            setValue(e.target.value);
+            setError(null);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              e.stopPropagation();
+              (e.currentTarget.nextElementSibling as HTMLButtonElement | null)?.click();
+            }
+          }}
+          placeholder="sk-ant-…"
+          className="h-8 min-w-0 flex-1 rounded-md border border-border bg-canvas px-2 font-mono text-xs text-fg outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
+        />
+        <button
+          type="button"
+          onClick={() => {
+            if (!looksLikeAnthropicKey(value)) return setError("Anthropic keys start with sk-ant-.");
+            setOwnKey(value.trim());
+            setValue("");
+          }}
+          className="h-8 shrink-0 rounded-md border border-border-strong bg-surface px-2.5 text-xs font-medium text-fg hover:bg-surface-muted"
+        >
+          Use key
+        </button>
+      </div>
+      {error && (
+        <p role="alert" className="mt-1 text-xs text-error-fg">
+          {error}
+        </p>
+      )}
+      <p className="mt-1.5 text-xs leading-5 text-fg-muted">
+        Kept in this browser tab only and sent with each message. The server never stores it.
+      </p>
     </div>
   );
 }

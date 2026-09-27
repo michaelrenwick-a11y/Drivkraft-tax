@@ -646,5 +646,27 @@ export type OperatorStats = {
     packages: { name: string; version: string | null }[];
   };
   smoke: { started: string; finished: string; passed: number; failed: number; checks: { name: string; ok: boolean; s: number }[]; runs: number; log_dir: string } | null;
-  visitors: { tracked: boolean; note: string };
+  visitors: {
+    tracked: boolean;
+    demo: boolean;
+    total: number;
+    new_24h: number;
+    active_24h: number;
+    active_7d: number;
+    requests: number;
+    mcp_requests: number;
+    pool_ready: number;
+    month_spend_usd: number;
+    monthly_cap_usd: number | null;
+    last_reset: string | null;
+  };
+};
+
+export type DemoStatus = {
+  demo: boolean;
+  monthly_cap_usd: number | null;
+  cap_reached: boolean;
+  limits: Record<string, { max: number; window_s: number }>;
+  mcp_remote: boolean;
+  reset_hour_utc: number;
 };

@@ -183,6 +183,57 @@ def test_classify():
     assert efile.name_control("O'Brien-Smith") == "OBRI"
 
 
+def test_list_cases_badge_fields():
+    case, doc = case_with_k1("Badge case")
+    row = next(c for c in call("list_cases")["cases"] if c["id"] == case["id"])
+    assert row["open_checklist"] == 0 and row["notes"] == 0 and row["research"] == 0
+    assert row["outputs"] == 0 and row["efile_status"] is None
+    approve_all(doc["id"])
+    f = to_signed(case["id"])
+    call("efile_submit", f["id"])
+    row = next(c for c in call("list_cases")["cases"] if c["id"] == case["id"])
+    assert row["efile_status"] == "accepted"
+
+
+def test_batch_candidates_only_eligible_cases():
+    empty_case = call("create_case", "Empty batch case", 2025, "single")["case"]
+    case, doc = case_with_k1("Batch ready")
+    ids = [c["case_id"] for c in call("batch_efile_candidates")["cases"]]
+    assert empty_case["id"] not in ids and case["id"] not in ids     # K-1 not approved yet
+    approve_all(doc["id"])
+    cands = call("batch_efile_candidates")["cases"]
+    row = next(c for c in cands if c["case_id"] == case["id"])
+    assert row["status"] is None and row["blocking"] == 0 and not row["stale"]
+
+
+def test_batch_push_and_submit():
+    case, doc = case_with_k1("Batch push")
+    approve_all(doc["id"])
+    blocked = call("create_case", "Batch blocked", 2025, "single")["case"]
+    call("intake_k1", blocked["id"], "oak-ventures")     # left unapproved, so export blocks
+
+    pushed = call("batch_efile_push", [case["id"], blocked["id"]])["results"]
+    ok = next(r for r in pushed if r["case_id"] == case["id"])
+    stuck = next(r for r in pushed if r["case_id"] == blocked["id"])
+    assert ok["ok"] and ok["status"] == "signed"
+    assert not stuck["ok"] and stuck["status"] == "ready" and stuck["blocking"] > 0
+
+    submitted = call("batch_efile_submit", [case["id"], blocked["id"]])["results"]
+    ok2 = next(r for r in submitted if r["case_id"] == case["id"])
+    stuck2 = next(r for r in submitted if r["case_id"] == blocked["id"])
+    assert ok2["ok"] and ok2["status"] == "accepted"
+    assert not stuck2["ok"] and stuck2["status"] == "ready"     # never got signed, so submit leaves it alone
+
+    # Re-pushing an already-accepted case is a no-op that still reports ok.
+    again = call("batch_efile_push", [case["id"]])["results"][0]
+    assert again["ok"] and again["status"] == "accepted"
+
+
+def test_batch_push_reports_unknown_case():
+    out = call("batch_efile_push", ["case-nope"])["results"][0]
+    assert not out["ok"] and out["error"]["code"] == "case_not_found"
+
+
 def test_http_xml_download():
     from fastapi.testclient import TestClient
     from server.app import build_http

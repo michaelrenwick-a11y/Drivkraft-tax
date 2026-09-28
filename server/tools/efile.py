@@ -3,10 +3,18 @@
 Each efile_export starts a new submission; a rejected one is fixed and exported
 again. The return hash is locked at signing: if the case's calculation changes
 after that, the submission can't be transmitted and must be exported again.
+
+Phase 13 adds a batch queue over the same per-case flow: batch_efile_candidates
+lists every eligible case with its status; batch_efile_push runs export/approve/sign
+per case (a fresh self-select PIN, the prior-year AGI already on file); batch_efile_submit
+transmits the ones that are signed. Each stops at the first problem for that case and
+reports why, without touching the others. Federal returns only — this build has no
+state e-file or extension support.
 """
 from __future__ import annotations
 
 import re
+import secrets
 
 from .. import efile, store
 from ..errors import ToolFailure, not_found
@@ -220,3 +228,98 @@ def efile_set_filer(case_id: str, first_name: str | None = None, last_name: str 
     return {"filer": efile.set_filer(case_id, first_name, last_name),
             "next_step": "Call efile_export to build a new submission with the corrected name.",
             "sources": [{"type": "case", "ref": f"case://{case_id}", "label": "Filing information"}]}
+
+
+# ── Batch queue ─────────────────────────────────────────────────────────────
+
+SUBMITTED = ("queued", "transmitted", "accepted")
+
+
+def _eligible(case: dict) -> bool:
+    docs = store.list_documents(case["id"])
+    return any(d["status"] == "approved" for d in docs) or bool(store.list_inputs(case["id"]))
+
+
+@tool("R", "Batch e-file candidates", "GET", "/efile/batch")
+def batch_efile_candidates() -> dict:
+    """Every writable case ready to calculate (an approved K-1 or set inputs), with
+    its latest e-file status, for the batch queue. Federal returns only — no state
+    or extension filing in this build. Read-only and free."""
+    out = []
+    for case in store.list_cases():
+        if case["read_only"] or not _eligible(case):
+            continue
+        filings = store.list_filings(case["id"])
+        f = efile.advance(filings[0]) if filings else None
+        out.append({
+            "case_id": case["id"], "case_name": case["name"], "tax_year": case["tax_year"],
+            "status": f["status"] if f else None,
+            "stale": bool(f) and f["status"] in OPEN and _current_fp(case) != f["fingerprint"],
+            "blocking": len(f["checks"]["blocking"]) if f and f["status"] == "ready" else 0,
+        })
+    out.sort(key=lambda c: c["case_name"])
+    return {"cases": out, "sources": []}
+
+
+def _push_one(case_id: str) -> dict:
+    case = require_case(case_id, writable=True)
+    filings = store.list_filings(case_id)
+    f = efile.advance(filings[0]) if filings else None
+    if f and f["status"] not in OPEN and f["status"] != "rejected":
+        return {"ok": f["status"] in SUBMITTED, "status": f["status"]}     # already past pushing, or void
+    if f is None or f["status"] == "rejected" or (f["status"] in OPEN and _current_fp(case) != f["fingerprint"]):
+        f = store.get_filing(efile_export(case_id)["filing"]["id"])
+    if f["status"] == "ready":
+        if f["checks"]["blocking"]:
+            return {"ok": False, "status": "ready", "blocking": len(f["checks"]["blocking"])}
+        f = store.get_filing(efile_approve(f["id"])["filing"]["id"])
+    if f["status"] == "approved":
+        rec = store.get_efile_record(case_id)
+        pin = f"{secrets.randbelow(90000) + 10000}"      # a fresh self-select PIN; nothing checks it against a prior one
+        f = store.get_filing(efile_sign(f["id"], pin, rec["prior_year_agi"] if rec else 0)["filing"]["id"])
+    return {"ok": f["status"] == "signed", "status": f["status"]}
+
+
+@tool("W", "Batch push for e-file", "POST", "/efile/batch/push")
+def batch_efile_push(case_ids: list[str]) -> dict:
+    """Prepare each case to file: export (if it has none, or the return changed
+    since), approve (refused while pre-checks block), and sign with a fresh
+    self-select PIN and the prior-year AGI already on file in the fake e-File
+    database. A case already queued, transmitted or accepted is left alone. Each
+    case stops at its first problem and reports why; the rest still run. Writes;
+    no cost.
+    """
+    results = []
+    for case_id in case_ids or []:
+        try:
+            results.append({"case_id": case_id, **_push_one(case_id)})
+        except ToolFailure as exc:
+            results.append({"case_id": case_id, "ok": False, "status": None, "error": exc.to_dict()})
+    return {"results": results, "sources": []}
+
+
+def _submit_one(case_id: str) -> dict:
+    case = require_case(case_id, writable=True)
+    filings = store.list_filings(case_id)
+    f = efile.advance(filings[0]) if filings else None
+    if f is None:
+        return {"ok": False, "status": None}
+    if f["status"] != "signed":
+        return {"ok": f["status"] in SUBMITTED, "status": f["status"]}
+    f = store.get_filing(efile_submit(f["id"])["filing"]["id"])
+    return {"ok": True, "status": f["status"]}
+
+
+@tool("W", "Batch submit for e-file", "POST", "/efile/batch/submit")
+def batch_efile_submit(case_ids: list[str]) -> dict:
+    """Transmit each case's signed submission to the FakeTransmitter (efile_submit).
+    A case that isn't signed yet is left unchanged and reported as such — push it
+    first. Writes; no cost.
+    """
+    results = []
+    for case_id in case_ids or []:
+        try:
+            results.append({"case_id": case_id, **_submit_one(case_id)})
+        except ToolFailure as exc:
+            results.append({"case_id": case_id, "ok": False, "status": None, "error": exc.to_dict()})
+    return {"results": results, "sources": []}

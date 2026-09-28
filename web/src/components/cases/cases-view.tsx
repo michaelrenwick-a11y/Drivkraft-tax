@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Calculator, FileScan, FolderOpen, ListChecks, Lock, Plus, type LucideIcon } from "lucide-react";
+import { ArrowRight, BookOpen, Calculator, FileScan, FolderDown, FolderOpen, ListChecks, ListTodo, Lock, NotebookPen, Plus, Send, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -11,7 +11,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
-import { FILING_STATUS_LABELS, useApi, type Case } from "@/lib/api";
+import { FILING_STATUS_LABELS, useApi, type Case, type FilingState } from "@/lib/api";
+import { cn } from "@/lib/cn";
 import { relativeTime } from "@/lib/format";
 
 const STEPS: { icon: LucideIcon; title: string; body: string }[] = [
@@ -123,6 +124,7 @@ function CaseList({ cases }: { cases: Case[] }) {
                 {!c.read_only && <> · created {relativeTime(c.created)}</>}
               </p>
             </div>
+            <CaseBadges c={c} />
             <CaseStatusPill status={c.status} />
             <ArrowRight
               className="size-4 shrink-0 text-fg-subtle transition-transform duration-150 group-hover:translate-x-0.5"
@@ -132,6 +134,58 @@ function CaseList({ cases }: { cases: Case[] }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+const EFILE_TONE: Partial<Record<FilingState, string>> = {
+  signed: "border-source-border bg-source-bg text-source-fg",
+  queued: "border-source-border bg-source-bg text-source-fg",
+  transmitted: "border-source-border bg-source-bg text-source-fg",
+  accepted: "border-success-border bg-success-bg text-success-fg",
+  rejected: "border-error-border bg-error-bg text-error-fg",
+};
+const EFILE_SHORT: Partial<Record<FilingState, string>> = {
+  ready: "Exported", approved: "Approved", signed: "Signed", queued: "Queued",
+  transmitted: "Sent", accepted: "Filed", rejected: "Rejected", void: "Void",
+};
+
+/** Small per-case indicators: open to-dos (highlighted), then notes/research/outputs counts and e-file status. */
+function CaseBadges({ c }: { c: Case }) {
+  const counts: { icon: LucideIcon; count: number; label: string; warn?: boolean }[] = [
+    { icon: ListTodo, count: c.open_checklist, label: "open to-do", warn: true },
+    { icon: NotebookPen, count: c.notes, label: "note" },
+    { icon: BookOpen, count: c.research, label: "research entry" },
+    { icon: FolderDown, count: c.outputs, label: "output" },
+  ].filter((b) => b.count > 0);
+  if (counts.length === 0 && !c.efile_status) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {counts.map(({ icon: Icon, count, label, warn }) => (
+        <span
+          key={label}
+          title={`${count} ${label}${count === 1 ? "" : "s"}`}
+          className={cn(
+            "inline-flex h-6 items-center gap-1 rounded-full border px-2 text-xs font-medium tabular-nums",
+            warn ? "border-warning-border bg-warning-bg text-warning-fg" : "border-border-strong bg-surface-muted text-fg-muted",
+          )}
+        >
+          <Icon className="size-3.5" aria-hidden />
+          {count}
+        </span>
+      ))}
+      {c.efile_status && (
+        <span
+          title={`E-file: ${EFILE_SHORT[c.efile_status]}`}
+          className={cn(
+            "inline-flex h-6 items-center gap-1 rounded-full border px-2 text-xs font-medium whitespace-nowrap",
+            EFILE_TONE[c.efile_status] ?? "border-border-strong bg-surface-muted text-fg-muted",
+          )}
+        >
+          <Send className="size-3.5" aria-hidden />
+          {EFILE_SHORT[c.efile_status]}
+        </span>
+      )}
+    </div>
   );
 }
 

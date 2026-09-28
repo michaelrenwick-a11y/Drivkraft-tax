@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import re
 
-from .. import store
+from .. import efile, store
 from ..errors import ToolFailure, not_found
 from ..samples import SAMPLES
 from . import tool
@@ -35,18 +35,26 @@ def case_status(docs: list[dict]) -> str:
 
 def _case_out(case: dict, docs: list[dict]) -> dict:
     counts = {s: sum(1 for d in docs if d["status"] == s) for s in STATUS_ORDER}
+    filings = store.list_filings(case["id"])
+    filing = efile.advance(filings[0]) if filings else None
     return {
         "id": case["id"], "name": case["name"], "tax_year": case["tax_year"],
         "filing_status": case["filing_status"], "read_only": case["read_only"],
         "description": case.get("description"), "created": case["created"],
         "status": case_status(docs), "documents": len(docs),
         "k1s": {k: v for k, v in counts.items() if v},
+        "open_checklist": sum(1 for i in store.list_checklist(case["id"]) if i["status"] == "open"),
+        "notes": len(store.list_notes(case["id"])),
+        "research": len(store.list_research(case["id"])),
+        "outputs": len(store.list_outputs(case["id"])),
+        "efile_status": filing["status"] if filing else None,
     }
 
 
 @tool("R", "List cases", "GET", "/cases")
 def list_cases() -> dict:
-    """List every case with its status and K-1 counts by review status.
+    """List every case with its status, K-1 counts by review status, and open
+    to-dos/notes/research/outputs/e-file counts for a case-list badge.
 
     Use this first to find a case id. Read-only and free. Reference cases
     (read_only: true) can be read but not changed; create your own case to intake

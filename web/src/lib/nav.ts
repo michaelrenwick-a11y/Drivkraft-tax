@@ -5,6 +5,7 @@ import {
   HeartHandshake,
   Inbox,
   NotebookPen,
+  Send,
   type LucideIcon,
 } from "lucide-react";
 
@@ -22,6 +23,7 @@ export const NAV: NavItem[] = [
   { href: "/inbox", label: "Inbox", icon: Inbox, keywords: ["proposals", "review", "accept"] },
   { href: "/research", label: "Research", icon: BookOpen, keywords: ["bizora", "citations"] },
   { href: "/notes", label: "Notes", icon: NotebookPen, keywords: ["meetings", "transcripts"] },
+  { href: "/efile", label: "E-file", icon: Send, keywords: ["batch", "submit", "transmit", "irs", "mef"] },
   { href: "/operator", label: "Operator", icon: Activity, keywords: ["metrics", "usage", "status"] },
   { href: "/credits", label: "Credits", icon: HeartHandshake, keywords: ["license", "open source", "about"] },
 ];

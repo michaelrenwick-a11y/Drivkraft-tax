@@ -20,6 +20,11 @@ export type Case = {
   status: "empty" | "extracting" | "in_review" | "ready";
   documents: number;
   k1s: Partial<Record<DocStatus, number>>;
+  open_checklist: number;
+  notes: number;
+  research: number;
+  outputs: number;
+  efile_status: FilingState | null;
 };
 
 export type Stage = { id: string; label: string; status: "pending" | "running" | "done" | "failed"; ms?: number };
@@ -604,6 +609,10 @@ export type EfileStatus = {
   filer: FilerInfo | null;
   efile_database: { ssn_masked: string; name_control: string; prior_year_agi: number; enrolled: string; note: string } | null;
 };
+
+/* Batch e-file (federal returns only; no state or extension filing) */
+export type BatchEfileCase = { case_id: string; case_name: string; tax_year: number; status: FilingState | null; stale: boolean; blocking: number };
+export type BatchEfileResult = { case_id: string; ok: boolean; status: FilingState | null; blocking?: number; error?: { code: string; message: string; fix_hint: string } };
 
 /* Operator view (server/operator.py) */
 export type Count = { count: number };

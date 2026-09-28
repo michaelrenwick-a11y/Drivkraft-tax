@@ -125,3 +125,9 @@ Deploy: see [`docs/deploy.md`](docs/deploy.md).
 - [OpenTax](https://github.com/filedcom/opentax) by Filed Inc.: AGPL v3, run unmodified as a subprocess, pinned at v2.0.4.
 - [Open Tax Document (OTD)](https://github.com/opentaxdocument/otd-spec) by Tom O'Sullivan, Crimson Tree Software: CC BY 4.0.
 - Visual design borrows from the Drivkraft platform (slate/blue Tailwind); fonts are Geist (OFL).
+
+Found via [Filed's LinkedIn post](https://lnkd.in/p/gZC2Nwuu) announcing the Open Tax Technology Alliance and the OpenTax/OTD open-source release — that's where this whole project started. Further reading from that post:
+
+- [Full announcement](https://www.filed.com/newsroom/open-tax-technology-alliance)
+- [Filed's blog on why they open-sourced their tax engine](https://www.filed.com/blog/we-open-sourced-our-tax-engine)
+- [Accounting Today coverage](https://www.accountingtoday.com/news/open-tax-technology-alliance-launches-with-free-1040-engine-data-standard-for-partnerships)

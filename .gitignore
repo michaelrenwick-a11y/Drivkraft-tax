@@ -28,3 +28,4 @@ web/next-env.d.ts
 .DS_Store
 .vscode/
 .idea/
+.vercel

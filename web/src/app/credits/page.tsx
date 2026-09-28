@@ -46,6 +46,16 @@ export default function CreditsPage() {
           with research from Bizora. Drivkraft Tax is an independent practice project. It isn&apos;t affiliated with or
           endorsed by any of them.
         </p>
+        <a
+          href="https://claude.ai/artifact/HR6Jmik1tiGXsUkN9rfxhh"
+          target="_blank"
+          rel="noreferrer"
+          className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-link hover:underline"
+        >
+          Read the case study
+          <ArrowUpRight className="size-3.5" aria-hidden />
+          <span className="sr-only">(opens in a new tab)</span>
+        </a>
       </header>
 
       <ul className="mt-8 grid gap-4">

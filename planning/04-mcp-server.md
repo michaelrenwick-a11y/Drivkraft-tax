@@ -62,9 +62,9 @@ Legend: **R** read-only · **W** writes to the case · **$** costs money · **P*
 | Notes | `add_note(case_id, text?, title?, kind, meeting_date?, attendees?, sample?)` | W | note summary (segments, timed?) |
 | | `list_notes(case_id?)` / `get_note(id)` | R | notes + samples / segments with `note://…#t=` refs, analysis, its proposals |
 | | `search_notes(query, case_id?)` | R | matches with timestamps |
-| | `analyze_meeting(note_id, refresh?)` | P | summary, decisions + proposals: doc_request, scenario, research_question, follow_up |
+| | `analyze_meeting(note_id, refresh?)` | P | summary + proposals: doc_request, decision, scenario, research_question, follow_up |
 | | `delete_note(id)` | W | deleted id (pending proposals removed) |
-| | `list_checklist(case_id)` / `update_checklist_item(id, status)` | R / W | requested documents, open or received |
+| | `list_checklist(case_id)` / `update_checklist_item(id, status)` | R / W | checklist items (`type` document from the client, or action a preparer to-do), open or received |
 | | `accept_proposal(proposal_id)` / `reject_proposal` / `undo_proposal` | W | result per kind (edit, checklist item, saved scenario, research or its Research-page link) |
 | Output | `export_workpaper(case_id)` | W | xlsx URL + version (writes a file, not case data) |
 | | `import_workpaper(case_id, xlsx_base64, filename?)` | P | changeset with cell diffs + conflicts |

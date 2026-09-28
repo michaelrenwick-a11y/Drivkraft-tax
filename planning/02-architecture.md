@@ -54,4 +54,4 @@ data/cases/<case_id>/
 
 ## SQLite tables
 
-`cases`, `documents`, `edits`, `inputs`, `scenarios`, `notes`, `research`, `proposals`, `chat_messages`, `workpapers`, `changesets`, `filings`, `efile_db`, `events` (tool-call log → operator page), `ai_usage` (Anthropic tokens and estimated cost per chat turn / meeting analysis; kept across resets), `visitors` (demo sandboxes, rate limits; Phase 10).
+`cases`, `documents`, `edits`, `inputs`, `scenarios`, `notes`, `checklist` (Phase 6; a `type` column added in Phase 12 splits it into document requests from the client and preparer to-do items from meeting decisions), `research`, `proposals`, `chat_messages`, `workpapers`, `changesets`, `filings`, `efile_db`, `events` (tool-call log → operator page), `ai_usage` (Anthropic tokens and estimated cost per chat turn / meeting analysis; kept across resets), `visitors` (demo sandboxes, rate limits; Phase 10).

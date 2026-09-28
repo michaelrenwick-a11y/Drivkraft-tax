@@ -39,7 +39,7 @@ Legend: **R** read-only · **W** writes to the case · **$** costs money · **P*
 
 | Group | Tool | Kind | Returns |
 |---|---|---|---|
-| Cases | `list_cases()` | R | cases + status |
+| Cases | `list_cases()` | R | cases + status, open to-do/notes/research/outputs counts, latest e-file status |
 | | `create_case(name, tax_year, filing_status)` | W | case |
 | | `get_case_summary(case_id)` | R | status, docs, checklist, open items |
 | Source docs | `list_documents(case_id)` | R | docs with kind/status |
@@ -79,6 +79,9 @@ Legend: **R** read-only · **W** writes to the case · **$** costs money · **P*
 | | `efile_submit(filing_id)` | W | submission id (FakeTransmitter only) |
 | | `efile_status(case_id)` | R | timeline + reject codes with fix links, fake e-File DB record |
 | | `efile_set_filer(case_id, first_name?, last_name?)` | W | corrected filer name (the R0000-500-01 fix) |
+| | `batch_efile_candidates()` | R | every eligible case, its latest status, staleness, blocking count (federal only; no state or extension e-file) |
+| | `batch_efile_push(case_ids)` | W | per case: export/approve/sign as needed, stopping at that case's first problem |
+| | `batch_efile_submit(case_ids)` | W | per case: transmit if signed, else unchanged |
 | Operator | `get_operator_stats()` | R | cases, K-1s, bridge exceptions, tool latency, AI/Bizora cost, e-file, upstream + smoke health |
 
 ## Resources

@@ -56,7 +56,7 @@ export default function CaseStudyPage() {
               <div className="cs-l">build time</div>
             </div>
             <div className="cs-stat">
-              <div className="cs-n">15</div>
+              <div className="cs-n">16</div>
               <div className="cs-l">build phases</div>
             </div>
             <div className="cs-stat">
@@ -350,8 +350,11 @@ export default function CaseStudyPage() {
         <section id="timeline">
           <div className="cs-section-head">
             <div className="cs-eyebrow">Build log</div>
-            <h2>Friday evening to Monday, in fifteen phases</h2>
-            <p>Three sessions, paired end to end with Claude Code. The clock below is a real accounting, not a guess.</p>
+            <h2>Friday evening to Monday, in sixteen phases</h2>
+            <p>
+              Three sessions, paired end to end with Claude Code, listed here in phase order rather than the order
+              they actually shipped in — see the note below. The clock is a real accounting, not a guess.
+            </p>
           </div>
 
           <div className="cs-clock-frame" role="img" aria-label="Digital clock reading 9 hours, 2 minutes, 9 seconds — total build time">
@@ -385,27 +388,26 @@ export default function CaseStudyPage() {
 
           <div className="cs-tl">
             <div className="cs-tl-day">Friday, September 25</div>
-            <TlItem time="14:57" name="Phase 0 — Bootstrap" desc="Pinned otd-spec + OpenTax binary, upstream smoke tests, the web app shell." />
-            <TlItem time="15:17" name="Phase 1 — The bridge" desc="OTD → OpenTax translation with a disposition ledger for every node." />
-            <TlItem time="16:59" name="Phase 1.5 — MCP server" desc="One tool registry, exposed over stdio." />
-            <TlItem time="17:43" name="Phase 2 — Cases & review" desc="K-1 intake and keyboard-first review UI." />
-            <TlItem time="18:38" name="Phase 3 — The return" desc="Calculation, scenarios, line attribution, data reset." />
-            <TlItem time="20:08" name="Phase 4 — Chat" desc="Web chat over MCP, proposals and the Inbox." />
-            <TlItem time="22:39" name="Phase 5 — Research" desc="A pluggable tax-research hook, a cost gate, and a demo cache." />
+            <TlItem name="Phase 0 — Bootstrap" desc="Pinned otd-spec + OpenTax binary, upstream smoke tests, the web app shell." />
+            <TlItem name="Phase 1 — The bridge" desc="OTD → OpenTax translation with a disposition ledger for every node." />
+            <TlItem name="Phase 1.5 — MCP server" desc="One tool registry, exposed over stdio." />
+            <TlItem name="Phase 2 — Cases & review" desc="K-1 intake and keyboard-first review UI." />
+            <TlItem name="Phase 3 — The return" desc="Calculation, scenarios, line attribution, data reset." />
+            <TlItem name="Phase 4 — Chat" desc="Web chat over MCP, proposals and the Inbox." />
+            <TlItem name="Phase 5 — Research" desc="A pluggable tax-research hook, a cost gate, and a demo cache." />
 
             <div className="cs-tl-day">Saturday, September 26</div>
-            <TlItem time="00:10" name="Phase 6 — Meeting notes" desc="Transcripts become proposals; case checklist." />
-            <TlItem time="10:34" name="Phase 7 — Outputs" desc="Excel workpaper round-trip with a cell-level diff, PDF review packet." />
-            <TlItem time="11:02" name="Phase 8 — E-file dry run" desc="MeF XML export, business-rule validation, a fake IRS transmitter." />
-            <TlItem time="11:31" name="Phase 9 — Operator page" desc="Tool latency, AI spend, bridge gaps, upstream health." />
-            <TlItem time="21:02" name="Phase 10 — Demo mode" desc="Per-visitor sandboxes, guardrails, tour, deploy config written." />
+            <TlItem name="Phase 6 — Meeting notes" desc="Transcripts become proposals; case checklist." />
+            <TlItem name="Phase 7 — Outputs" desc="Excel workpaper round-trip with a cell-level diff, PDF review packet." />
+            <TlItem name="Phase 8 — E-file dry run" desc="MeF XML export, business-rule validation, a fake IRS transmitter." />
+            <TlItem name="Phase 9 — Operator page" desc="Tool latency, AI spend, bridge gaps, upstream health." />
+            <TlItem name="Phase 10 — Demo mode" desc="Per-visitor sandboxes, guardrails, tour, deploy config written." />
 
             <div className="cs-tl-day">Monday, September 28</div>
-            <TlItem time="10:09" name="Phase 11 — Source documents" desc="Drop W-2s and 1099s onto a case; text-layer PDF reader." />
-            <TlItem hi time="11:04" name="Launch" desc="MIT license, deployed to Fly.io and Vercel, repo made public." />
+            <TlItem name="Phase 11 — Source documents" desc="Drop W-2s and 1099s onto a case; text-layer PDF reader." />
+            <TlItem hi name="Launch" desc="MIT license, deployed to Fly.io and Vercel, repo made public." />
             <TlItem
               hi
-              time="11:14"
               name="Live QA catches a real bug"
               desc={
                 <>
@@ -417,13 +419,15 @@ export default function CaseStudyPage() {
               }
             />
             <TlItem
-              time="11:41"
               name="Phase 12 — Decisions become to-dos"
               desc="Meeting decisions get the same accept/reject path as document requests, landing as a preparer to-do instead of a read-only recap."
             />
             <TlItem
+              name="Phase 13 — Case-list badges + batch e-file"
+              desc="Per-case status chips on the case list; a Queue/Filed board pushes several ready returns through e-file in one pass."
+            />
+            <TlItem
               hi
-              time="11:58"
               name="Phase 14 — Fix the stale Vercel deployment"
               desc={
                 <>
@@ -434,27 +438,26 @@ export default function CaseStudyPage() {
               }
             />
             <TlItem
-              time="12:06"
               name="Phase 14 — Host the case study live"
               desc="This page moves from a standalone artifact into the app itself, at /case-study, linked both ways with the live demo."
             />
             <TlItem
-              time="12:16"
-              name="Phase 13 — Case-list badges + batch e-file"
-              desc="Per-case status chips on the case list; a Queue/Filed board pushes several ready returns through e-file in one pass."
+              hi
+              name="Phase 15 — Close the loop"
+              desc="A permanent 'Read the case study' link goes into the app sidebar. This page's own timeline and phase count catch up to what actually shipped."
             />
             <TlItem
               hi
-              time="12:32"
-              name="Phase 15 — Close the loop"
-              desc="A permanent 'Read the case study' link goes into the app sidebar. This page's own timeline and phase count catch up to what actually shipped — including, finally, itself."
+              name="Phase 16 — The build log, finished"
+              desc="The '~8 hrs' guess is replaced by the clock above — 9h 02m 09s, summed from git history, not rounded. The timeline is reordered into phase order and its times dropped, since build order and phase order aren't the same thing."
             />
           </div>
           <p className="cs-tl-note">
             Every phase kept its own tests and a planning-doc update; the operator page&apos;s live error count
-            above is the demo genuinely catching its own bug post-launch, not a staged example. Phases 13 and 14
-            ran as separate, unsynchronized sessions on the same repo — 13 is dated after 14 because it was
-            documented after the collision was noticed.
+            above is the demo genuinely catching its own bug post-launch, not a staged example. This list runs in
+            phase order, not build order: Phases 13 and 14 ran as separate, unsynchronized sessions on the same
+            repo, and Phase 13&apos;s work actually finished after Phase 14&apos;s — it&apos;s placed here by its
+            number, not its timestamp.
           </p>
         </section>
 
@@ -557,19 +560,16 @@ cd web && npm install && npm run dev`}</pre>
 }
 
 function TlItem({
-  time,
   name,
   desc,
   hi,
 }: {
-  time: string;
   name: string;
   desc: ReactNode;
   hi?: boolean;
 }) {
   return (
     <div className={`cs-tl-item${hi ? " cs-hi" : ""}`}>
-      <span className="cs-tl-time">{time}</span>
       <span className="cs-tl-name">{name}</span>
       <div className="cs-tl-desc">{desc}</div>
     </div>
@@ -730,7 +730,6 @@ const CASE_STUDY_CSS = `
 .cs-tl-item{position:relative; padding:9px 0 9px 20px;}
 .cs-tl-item::before{content:""; position:absolute; left:-26px; top:15px; width:8px; height:8px; border-radius:50%; background:var(--cs-panel); border:2px solid var(--cs-muted);}
 .cs-tl-item.cs-hi::before{background:var(--cs-accent); border-color:var(--cs-accent);}
-.cs-tl-time{font-family:"IBM Plex Mono"; font-size:12px; color:var(--cs-muted); margin-right:10px;}
 .cs-tl-name{font-weight:600; font-size:14.5px;}
 .cs-tl-desc{color:var(--cs-muted); font-size:13.5px; margin-top:2px;}
 .cs-tl-note{margin-top:16px; font-size:13px; color:var(--cs-muted); font-style:italic;}

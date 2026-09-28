@@ -122,7 +122,8 @@ SCHEMA = {
             "properties": {
                 "name": {"type": "string", "description": "Short scenario name, e.g. 'File jointly'."},
                 "rationale": {"type": "string"},
-                "filing_status": {"type": ["string", "null"], "enum": ["single", "mfj", "mfs", "hoh", "qss", None]},
+                "filing_status": {"anyOf": [{"type": "string", "enum": ["single", "mfj", "mfs", "hoh", "qss"]},
+                                             {"type": "null"}]},
                 "k1_box_values": {"type": "array", "items": {
                     "type": "object", "additionalProperties": False, "required": ["doc_id", "path", "value"],
                     "properties": {"doc_id": {"type": ["string", "null"], "description": "A K-1 doc_id from the case, or null for every K-1 carrying the path."},

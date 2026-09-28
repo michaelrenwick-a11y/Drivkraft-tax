@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
@@ -57,6 +58,13 @@ export function SidebarFooter() {
       <div className="rounded-lg border border-sidebar-border p-3 text-xs leading-5 text-sidebar-fg">
         <p className="font-medium text-sidebar-fg-active">Practice build</p>
         <p>Synthetic data only. Not tax advice and never filed with the IRS.</p>
+        <Link
+          href="/case-study"
+          className="mt-1.5 inline-flex items-center gap-1 font-medium text-sidebar-fg-active hover:underline"
+        >
+          Read the case study
+          <ArrowUpRight className="size-3" aria-hidden />
+        </Link>
       </div>
       <ResetData />
     </div>

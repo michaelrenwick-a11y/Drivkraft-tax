@@ -56,11 +56,11 @@ export default function CaseStudyPage() {
               <div className="cs-l">build time</div>
             </div>
             <div className="cs-stat">
-              <div className="cs-n">12</div>
+              <div className="cs-n">15</div>
               <div className="cs-l">build phases</div>
             </div>
             <div className="cs-stat">
-              <div className="cs-n">113</div>
+              <div className="cs-n">118</div>
               <div className="cs-l">tests passing</div>
             </div>
             <div className="cs-stat">
@@ -336,10 +336,11 @@ export default function CaseStudyPage() {
             <div className="cs-finding">
               <div className="cs-finding-no">06</div>
               <div>
-                <h3>Outputs, e-file dry run &amp; operator page</h3>
+                <h3>Outputs, e-file &amp; operator page</h3>
                 <p>
                   An Excel workpaper round-trip with a cell-level diff, a PDF review packet, a MeF export against a
-                  fake IRS transmitter, and a live dashboard watching tool latency, AI spend and errors.
+                  fake IRS transmitter, a batch e-file queue across cases with per-case readiness badges, and a live
+                  dashboard watching tool latency, AI spend and errors.
                 </p>
               </div>
             </div>
@@ -349,7 +350,7 @@ export default function CaseStudyPage() {
         <section id="timeline">
           <div className="cs-section-head">
             <div className="cs-eyebrow">Build log</div>
-            <h2>Friday evening to Monday, in twelve phases</h2>
+            <h2>Friday evening to Monday, in fifteen phases</h2>
             <p>~8 hours of focused build time across three sessions, paired end to end with Claude Code.</p>
           </div>
           <div className="cs-tl">
@@ -385,10 +386,39 @@ export default function CaseStudyPage() {
                 </>
               }
             />
+            <TlItem
+              time="11:41"
+              name="Phase 12 — Decisions become to-dos"
+              desc="Meeting decisions get the same accept/reject path as document requests, landing as a preparer to-do instead of a read-only recap."
+            />
+            <TlItem
+              hi
+              time="11:58"
+              name="Phase 14 — Fix the stale Vercel deployment"
+              desc={
+                <>
+                  The Vercel project auto-building from GitHub pushes was erroring on every deploy; the real,
+                  working project was a separate, correctly-scoped one the app had been quietly serving from all
+                  along. Case study and README repointed at the stable domain.
+                </>
+              }
+            />
+            <TlItem
+              time="12:06"
+              name="Phase 14 — Host the case study live"
+              desc="This page moves from a standalone artifact into the app itself, at /case-study, linked both ways with the live demo."
+            />
+            <TlItem
+              time="12:16"
+              name="Phase 13 — Case-list badges + batch e-file"
+              desc="Per-case status chips on the case list; a Queue/Filed board pushes several ready returns through e-file in one pass."
+            />
           </div>
           <p className="cs-tl-note">
             Every phase kept its own tests and a planning-doc update; the operator page&apos;s live error count
-            above is the demo genuinely catching its own bug post-launch, not a staged example.
+            above is the demo genuinely catching its own bug post-launch, not a staged example. Phases 13 and 14
+            ran as separate, unsynchronized sessions on the same repo — 13 is dated after 14 because it was
+            documented after the collision was noticed.
           </p>
         </section>
 

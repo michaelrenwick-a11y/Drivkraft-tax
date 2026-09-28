@@ -52,7 +52,7 @@ export default function CaseStudyPage() {
           </div>
           <div className="cs-stats">
             <div className="cs-stat">
-              <div className="cs-n">~8 hrs</div>
+              <div className="cs-n">9h 02m</div>
               <div className="cs-l">build time</div>
             </div>
             <div className="cs-stat">
@@ -351,8 +351,38 @@ export default function CaseStudyPage() {
           <div className="cs-section-head">
             <div className="cs-eyebrow">Build log</div>
             <h2>Friday evening to Monday, in fifteen phases</h2>
-            <p>~8 hours of focused build time across three sessions, paired end to end with Claude Code.</p>
+            <p>Three sessions, paired end to end with Claude Code. The clock below is a real accounting, not a guess.</p>
           </div>
+
+          <div className="cs-clock-frame" role="img" aria-label="Digital clock reading 9 hours, 2 minutes, 9 seconds — total build time">
+            <div className="cs-clock-plate">TOTAL BUILD TIME</div>
+            <div className="cs-clock-screen">
+              <div className="cs-clock-ghost" aria-hidden="true">
+                88<span className="cs-clock-colon">:</span>88<span className="cs-clock-colon">:</span>88
+              </div>
+              <div className="cs-clock-digits">
+                09<span className="cs-clock-colon">:</span>02<span className="cs-clock-colon">:</span>09
+              </div>
+              <div className="cs-clock-units">
+                <span>HRS</span>
+                <span>MIN</span>
+                <span>SEC</span>
+              </div>
+            </div>
+            <div className="cs-clock-screws">
+              <span />
+              <span />
+              <span />
+              <span />
+            </div>
+          </div>
+          <p className="cs-clock-caption">
+            Not a round-number guess — summed from git history. 32 commits across three sessions (Sep 25–28, 2026);
+            the gap between each consecutive pair counts as build time, capped at 30 minutes so overnight and
+            weekend breaks between sessions don&apos;t inflate it. What&apos;s left is 9h 02m 09s of real, accounted
+            work.
+          </p>
+
           <div className="cs-tl">
             <div className="cs-tl-day">Friday, September 25</div>
             <TlItem time="14:57" name="Phase 0 — Bootstrap" desc="Pinned otd-spec + OpenTax binary, upstream smoke tests, the web app shell." />
@@ -412,6 +442,12 @@ export default function CaseStudyPage() {
               time="12:16"
               name="Phase 13 — Case-list badges + batch e-file"
               desc="Per-case status chips on the case list; a Queue/Filed board pushes several ready returns through e-file in one pass."
+            />
+            <TlItem
+              hi
+              time="12:32"
+              name="Phase 15 — Close the loop"
+              desc="A permanent 'Read the case study' link goes into the app sidebar. This page's own timeline and phase count catch up to what actually shipped — including, finally, itself."
             />
           </div>
           <p className="cs-tl-note">
@@ -647,6 +683,45 @@ const CASE_STUDY_CSS = `
 .cs-finding-no{font-family:"IBM Plex Mono"; color:var(--cs-muted); font-size:13px; padding-top:2px;}
 .cs-finding h3{font-size:16px; margin:0 0 6px; font-family:"IBM Plex Sans"; font-weight:600;}
 .cs-finding p{margin:0; color:var(--cs-muted); font-size:14px;}
+
+.cs-clock-frame{
+  position:relative; max-width:360px; margin:0 auto 14px; padding:16px 18px 20px;
+  background:linear-gradient(155deg,#3a3f4a,#22262f); border-radius:16px;
+  box-shadow:0 1px 0 rgba(255,255,255,.08) inset, 0 -2px 0 rgba(0,0,0,.35) inset, 0 10px 28px -10px rgba(0,0,0,.5);
+}
+.cs-clock-plate{
+  font-family:"IBM Plex Mono"; font-size:10px; letter-spacing:.14em; text-align:center; color:#9aa0ac;
+  margin-bottom:10px;
+}
+.cs-clock-screen{
+  position:relative; background:#0c1210; border-radius:8px; padding:14px 10px 8px;
+  box-shadow:0 2px 6px rgba(0,0,0,.5) inset, 0 0 0 1px rgba(0,0,0,.6);
+  overflow:hidden;
+}
+.cs-clock-ghost, .cs-clock-digits{
+  font-family:"IBM Plex Mono"; font-weight:600; text-align:center; font-variant-numeric:tabular-nums;
+  font-size:clamp(30px,8vw,42px); letter-spacing:.06em; line-height:1;
+}
+.cs-clock-ghost{position:absolute; inset:14px 10px auto; color:#e0973e; opacity:.08;}
+.cs-clock-digits{position:relative; color:#f6c98a; text-shadow:0 0 6px rgba(246,201,138,.75), 0 0 16px rgba(224,151,62,.45);}
+.cs-clock-colon{padding:0 2px; opacity:.85;}
+.cs-clock-units{
+  display:flex; justify-content:space-around; margin-top:4px; padding:0 2px;
+  font-family:"IBM Plex Mono"; font-size:9.5px; letter-spacing:.12em; color:#6b8079;
+}
+.cs-clock-units span{flex:1; text-align:center;}
+.cs-clock-screws span{
+  position:absolute; width:6px; height:6px; border-radius:50%;
+  background:radial-gradient(circle at 35% 35%, #666, #1a1a1a);
+  box-shadow:0 1px 1px rgba(0,0,0,.6);
+}
+.cs-clock-screws span:nth-child(1){top:7px; left:7px;}
+.cs-clock-screws span:nth-child(2){top:7px; right:7px;}
+.cs-clock-screws span:nth-child(3){bottom:7px; left:7px;}
+.cs-clock-screws span:nth-child(4){bottom:7px; right:7px;}
+.cs-clock-caption{
+  max-width:46ch; margin:0 auto 30px; text-align:center; font-size:12.5px; color:var(--cs-muted);
+}
 
 .cs-tl{position:relative; padding-left:26px;}
 .cs-tl::before{content:""; position:absolute; left:6px; top:4px; bottom:4px; width:1px; background:var(--cs-line);}

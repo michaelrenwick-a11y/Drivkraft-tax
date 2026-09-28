@@ -1,6 +1,6 @@
 # Drivkraft Tax — Practice Build Plan
 
-> v10 (2026-09-28; Phases 0–9, 11 and 12 done, Phase 10 built). **A personal practice project and portfolio piece** built on the Open Tax Technology Alliance's open code: the OTD K-1 standard (`opentaxdocument/otd-spec`) and the OpenTax 1040 engine (`filedcom/opentax`). It is not a product. It's fully separate from the Drivkraft platform (no shared code, database or accounts) and borrows only Drivkraft's visual design as a starting point.
+> v11 (2026-09-28; Phases 0–9, 11 and 12 done, Phase 10 built; public messaging revised post-launch). **A personal practice project and portfolio piece** built on the Open Tax Technology Alliance's open code: the OTD K-1 standard (`opentaxdocument/otd-spec`) and the OpenTax 1040 engine (`filedcom/opentax`). It is not a product. It's fully separate from the Drivkraft platform (no shared code, database or accounts) and borrows only Drivkraft's visual design as a starting point.
 
 ## Charter
 
@@ -14,8 +14,9 @@
 5. **Keep the OTD discipline**: null ≠ 0, every value and claim traces to a source, and nothing that can't be mapped is dropped silently.
 6. **Paid APIs are optional and guarded.** With no key, a feature shows "not configured." In the demo, research answers are cached and chat is rate-limited and capped.
 7. **Credit upstream honestly.** "Built on open-source releases from Filed and Crimson Tree Software," with links to OpenTax's source (AGPL) and OTD (CC BY). Never imply endorsement.
+8. **Public messaging matches what's actually wired up.** The README and case study describe the research and meeting-notes hooks as pluggable extension points (naming examples like Bizora/BlueJ for research, Vinyl/Jump.ai for notes) rather than features run against a live API in this build, since Bizora itself was never actually called with a live key. The case study also doesn't surface the internal engine-gap findings publicly (kept in `planning/03-otd-to-opentax-mapping.md` instead) — the point of sharing this is what was built, not a critique of the upstream projects.
 
-**Done looks like**: someone opens the shared link, sees a synthetic client case, and in under two minutes watches a K-1 PDF become verified data. They click any number to see where it came from, ask the chat "why did line 8 go up?" and get an answer that cites the K-1 box, a meeting note and a Bizora citation, run a what-if, download the Excel workpaper and run an e-file dry run. A technical viewer can add the MCP endpoint to Claude Desktop and do the same things in conversation.
+**Done looks like**: someone opens the shared link, sees a synthetic client case, and in under two minutes watches a K-1 PDF become verified data. They click any number to see where it came from, ask the chat "why did line 8 go up?" and get an answer that cites the K-1 box, a meeting note and a cited research answer, run a what-if, download the Excel workpaper and run an e-file dry run. A technical viewer can add the MCP endpoint to Claude Desktop and do the same things in conversation.
 
 ---
 

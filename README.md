@@ -2,9 +2,9 @@
 
 **A Schedule K-1 from PDF to a Form 1040, with every number traced back to its source.**
 
-A practice build on the Open Tax Technology Alliance's open code: the [OTD](https://github.com/opentaxdocument/otd-spec) K-1 data standard and the [OpenTax](https://github.com/filedcom/opentax) 1040 engine. One MCP server holds every capability, so Claude Desktop, Claude Code and the web app share the same tools.
+A practice build on the Open Tax Technology Alliance's open code: the [OTD](https://github.com/opentaxdocument/otd-spec) K-1 data standard and the [OpenTax](https://github.com/filedcom/opentax) 1040 engine. One MCP server holds every capability, so Claude Desktop, Claude Code and the web app share the same tools. Shared publicly under MIT, in the same spirit of openness that made OTD and OpenTax available to build on in the first place.
 
-> **Synthetic data only.** Every client, K-1 and figure is made up. It isn't tax advice, and nothing is ever sent to the IRS. This is an independent project, not affiliated with or endorsed by Filed, Crimson Tree Software or Bizora.
+> **Synthetic data only.** Every client, K-1 and figure is made up. It isn't tax advice, and nothing is ever sent to the IRS. This is an independent project, not affiliated with or endorsed by Filed or Crimson Tree Software.
 
 **Live demo:** [drivkraft-tax-ix69-kuvmdn874-michael-renwick-s-projects.vercel.app](https://drivkraft-tax-ix69-kuvmdn874-michael-renwick-s-projects.vercel.app) · **Case study:** [build log](https://claude.ai/artifact/HR6Jmik1tiGXsUkN9rfxhh) · **2-minute video:** _link_
 
@@ -16,10 +16,10 @@ A practice build on the Open Tax Technology Alliance's open code: the [OTD](http
 | **The bridge** | Translates OTD to OpenTax inputs with a disposition ledger for every node (mapped, collapsed, derived, unsupported, informational). It refuses invalid OTD, keeps null ≠ 0, and flags anything the engine accepts but never uses. |
 | **Return** | OpenTax calculates the 1040. Click any line to see a leave-one-out waterfall of the K-1 boxes and inputs behind it. What-if scenarios compare side by side. |
 | **Chat** | Claude over the same MCP tools, with visible tool steps and citation chips that open the K-1 box or 1040 line. Chat can propose an edit but never make one; proposals wait in the Inbox. |
-| **Notes and research** | Meeting transcripts become proposals (document requests, scenarios, research questions, a follow-up draft). Tax research via Bizora comes with numbered citations to primary authority. |
+| **Notes and research** | Meeting transcripts become proposals (document requests, scenarios, research questions, a follow-up draft) plus a per-case checklist. A research hook on each case comes with numbered citations to primary authority — a pluggable extension point (e.g. Bizora, BlueJ), not wired to a live API in this build. |
 | **Outputs** | An Excel workpaper round-trip: export, edit the yellow cells, re-import, then review a cell-level diff before anything applies. Also a PDF review packet. |
 | **E-file dry run** | OpenTax builds MeF XML and checks it against the business rules. A fake transmitter plays the IRS e-File database (name control, prior-year AGI), with rejects that link to the field to fix. |
-| **Operator page** | Tool latency (p50/p95), estimated AI and Bizora spend, bridge gaps by box, e-file rejects, upstream pins and the smoke test results. |
+| **Operator page** | Tool latency (p50/p95), estimated AI spend, bridge gaps by box, e-file rejects, upstream pins and the smoke test results. |
 
 ## How it fits together
 
@@ -52,23 +52,21 @@ flowchart LR
   REG -- subprocess --> OTD
   BR -- subprocess --> OT
   CHAT -. optional .-> AN["Anthropic API"]
-  REG -. optional .-> BZ["Bizora API<br/>(or demo cache)"]
+  REG -. optional .-> BZ["Research hook<br/>(demo cache; e.g. Bizora, BlueJ)"]
 ```
 
 Every capability is a plain function registered once in `server/tools/`. `server/app.py` exposes each one twice, as an MCP tool and as a FastAPI route, so the UI never holds logic that Claude can't reach. Every response carries `sources[]`, the refs the chat cites.
 
-## What I found: where OTD and OpenTax don't meet
+## What's mine: everything above the two pinned engines
 
-The bridge's ledger makes these visible on every K-1. Details are in [`planning/03-otd-to-opentax-mapping.md`](planning/03-otd-to-opentax-mapping.md).
+otd-spec and OpenTax run unmodified, as a subprocess — a data standard and a calculation engine, neither with a UI or any of the layers below. Everything from here down is this build:
 
-- **Accepted isn't used.** OpenTax 2.0.4 accepts Box 4c, 13, 18 and 19 but never routes them into the calculation. Box 16 only routes with K-3 fields, and 20 UBIA/SSTB never reach Form 8995. The bridge flags each as `calculation_incomplete`, and approval needs a reviewer to acknowledge it.
-- **Unknown fields are stripped silently.** `partnership_ein`, which every upstream benchmark uses, is accepted and dropped. The bridge reads the engine's own schema (`opentax node inspect`) at runtime and refuses anything else.
-- **Zero is treated as missing.** A K-1 with 14A = 0 still gets SE tax on 4a, and Box 1 counts as passive whenever 14A is absent *or* zero.
-- **A 28% gain zeroes the tax.** Any Box 9b amount makes two nodes both send `rate_28_gain`. Income tax then comes out $0, with only a warning. The bridge holds 9b back and reports engine node failures as caveats.
-- **Box 13 needed a detour.** Codes A–G go to Schedule A and H to line 9, the way upstream benchmarks do it by hand. The bridge emits several forms per K-1.
-- **MeF export gaps.** The prior-year AGI is never written to the header, so a self-select PIN can't be verified. `return validate` also checks rules for forms the return doesn't contain. IND-082 fails every balance-due return, and Schedule A is emitted even when the standard deduction wins.
-
-Two things get you most of the way when mapping between these standards: a ledger that accounts for every node, and a refusal to drop anything silently.
+- **Design & UI.** The whole visual system — the case list, K-1 review, return and operator screens — designed and built from scratch. Neither upstream project renders a pixel.
+- **The bridge & disposition ledger.** The translation layer between the two standards, with a per-field audit trail (mapped, derived, informational, unverified) so nothing reaches the calculation silently. Full detail on the engine-level gaps this surfaced is in [`planning/03-otd-to-opentax-mapping.md`](planning/03-otd-to-opentax-mapping.md).
+- **Chat.** A web chat panel over the same MCP tools, with proposals landing in an Inbox for review rather than applying themselves.
+- **Research hook.** A pluggable slot on each case for a research tool to attach to (extension point, not wired to a live API in this build).
+- **Meeting notes → proposals & to-dos.** Transcripts turn into proposals plus a per-case checklist.
+- **Outputs, e-file dry run & operator page.** The Excel round-trip, PDF packet, MeF export against a fake transmitter, and a live dashboard on tool latency, spend and errors.
 
 ## Run it locally
 
@@ -126,5 +124,4 @@ Deploy: see [`docs/deploy.md`](docs/deploy.md).
 
 - [OpenTax](https://github.com/filedcom/opentax) by Filed Inc.: AGPL v3, run unmodified as a subprocess, pinned at v2.0.4.
 - [Open Tax Document (OTD)](https://github.com/opentaxdocument/otd-spec) by Tom O'Sullivan, Crimson Tree Software: CC BY 4.0.
-- [Bizora](https://www.bizora.ai): tax research API.
 - Visual design borrows from the Drivkraft platform (slate/blue Tailwind); fonts are Geist (OFL).

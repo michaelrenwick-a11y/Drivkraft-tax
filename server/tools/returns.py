@@ -127,6 +127,49 @@ def _base(case_id: str) -> tuple[dict, list[calc.Contribution], dict]:
     return case, contribs, {**hit, "included": included, "skipped": skipped}
 
 
+# 2025 Social Security wage base 176,100 × 6.2%: the most one person can have withheld (IRC §3101(a)).
+SS_TAX_MAX_PER_PERSON = 10_918.20
+
+
+def _cross_checks(contribs: list[calc.Contribution], lines: dict[str, float]) -> list[dict]:
+    """Where the engine's lines disagree with what the case's own documents say.
+    Each is a known OpenTax gap at the pinned version; we report it, never patch it."""
+    out = []
+    a, c, e = (lines.get(k) for k in ("line12a_standard_deduction", "line12c_deduction_total",
+                                      "line12e_itemized_deductions"))
+    if a and e and c is not None and abs(c - e) < calc.TOLERANCE and e + calc.TOLERANCE < a:
+        out.append({"code": "itemized_below_standard", "severity": "warning",
+                    "message": f"The engine used itemized deductions ({e:,.2f}) although the standard deduction "
+                               f"({a:,.2f}) is larger, which overstates taxable income by {a - e:,.2f}.",
+                    "fix_hint": "OpenTax's 1040 takes Schedule A whenever it's non-zero. Compare with the standard "
+                                "deduction by hand, or remove the Schedule A inputs to see the standard result."})
+    w2s = [x.data for x in contribs if x.node_type == "w2"]
+    total_ss = sum(w.get("box4_ss_withheld") or 0 for w in w2s)
+    if len(w2s) >= 2 and total_ss > SS_TAX_MAX_PER_PERSON + calc.TOLERANCE:
+        by_person: dict[str, float] = {}
+        for w in w2s:
+            key = w.get("employee_ssn") or w.get("employer_name") or "?"
+            by_person[key] = by_person.get(key, 0) + (w.get("box4_ss_withheld") or 0)
+        if all(v <= SS_TAX_MAX_PER_PERSON + calc.TOLERANCE for v in by_person.values()) and len(by_person) > 1:
+            out.append({"code": "excess_ss_across_spouses", "severity": "warning",
+                        "message": f"The engine credits {total_ss - SS_TAX_MAX_PER_PERSON:,.2f} of excess Social Security "
+                                   "tax, but no one person had more than the maximum withheld: it adds the W-2s of "
+                                   "different people together.",
+                        "fix_hint": "Excess Social Security is per person (IRC §31(b)). Treat the refund as overstated "
+                                    "by that amount; OpenTax ignores W-2 employee_ssn at the pinned version."})
+    qd = sum(x.data.get("box1b") or 0 for x in contribs if x.node_type == "f1099div")
+    qd += sum(x.data.get("box6b_qualified_dividends") or 0 for x in contribs if x.node_type == "k1_partnership")
+    got = lines.get("line3a_qualified_dividends") or 0
+    if qd and abs(got - qd) >= 1:
+        out.append({"code": "qualified_dividends_mismatch", "severity": "warning",
+                    "message": f"Line 3a is {got:,.2f}, but the documents add up to {qd:,.2f} of qualified dividends "
+                               "(1099-DIV box 1b plus K-1 box 6b).",
+                    "fix_hint": "OpenTax keeps only one source's line 3a, so the return (and its e-file XML) shows "
+                                "the smaller figure. The tax worksheet still receives the K-1's share, so check line 3a "
+                                "rather than line 16 (benchmark 82's tax matches the IRS answer despite this)."})
+    return out
+
+
 def _caveats(res: dict) -> list[dict]:
     out = []
     for f in res["engine_failures"]:
@@ -156,7 +199,7 @@ def calculate_return(case_id: str) -> dict:
     were included or skipped. Cached until the inputs change. Read-only; free; about a second.
     To see where a line comes from, call explain_line.
     """
-    case, _, res = _base(case_id)
+    case, contribs, res = _base(case_id)
     lines = _lines_out(case_id, res["lines"])
     return {
         "case_id": case_id, "tax_year": case["tax_year"], "fingerprint": res["fingerprint"],
@@ -164,7 +207,7 @@ def calculate_return(case_id: str) -> dict:
                      if k in res["lines"] or k in res["summary"]},
         "lines": lines,
         "sections": [{"id": s[0], "title": s[1]} for s in SECTIONS],
-        "caveats": _caveats(res),
+        "caveats": _caveats(res) + _cross_checks(contribs, res["lines"]),
         "warnings": res["warnings"], "engine_failures": res["engine_failures"],
         "included": res["included"], "skipped": res["skipped"],
         "other_inputs": [{"id": i["id"], "node_type": i["node_type"],

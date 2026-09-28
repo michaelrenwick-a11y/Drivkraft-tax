@@ -109,18 +109,24 @@ def get_case_summary(case_id: str) -> dict:
     for item in store.list_checklist(case_id):
         if item["status"] == "open":
             open_items.append({"checklist_id": item["id"], "kind": "document_request", "text": f"Requested: {item['item']}"})
+    inputs = store.list_inputs(case_id)
     return {
         "case": _case_out(case, docs),
         "documents": out_docs,
+        "inputs": len(inputs),
+        "source_documents": len(store.list_sources(case_id)),
         "open_items": open_items,
-        "next_action": _next_action(case, out_docs),
+        "next_action": _next_action(case, out_docs, len(inputs)),
         "sources": [],
     }
 
 
-def _next_action(case: dict, docs: list[dict]) -> str:
+def _next_action(case: dict, docs: list[dict], inputs: int = 0) -> str:
+    if not docs and inputs:
+        return "Calculate the return: calculate_return(case_id)."
     if not docs:
-        return "Intake a K-1: intake_k1(case_id, sample='synthetic-k1')."
+        return ("Add source documents (add_source_document with a synthetic PDF) or intake a K-1: "
+                "intake_k1(case_id, sample='synthetic-k1').")
     if any(d["status"] == "extracting" for d in docs):
         return "Wait for extraction to finish."
     first = next((d for d in docs if d["status"] in ("blocked", "needs_review")), None)

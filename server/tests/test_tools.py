@@ -92,7 +92,9 @@ def test_calculate_reference_bench_82_matches_the_benchmark():
     for k in ("line24_total_tax", "line35a_refund", "line37_amount_owed"):
         assert abs((lines.get(k) or 0) - correct[k]) <= 5, k
     assert [i["doc_id"] for i in out["included"]] == ["ref-bench-82-oak"]
-    assert not out["engine_failures"] and not out["caveats"]
+    assert not out["engine_failures"]
+    # Phase 11 cross-check: the engine's line 3a drops the K-1's box 6b (benchmark says 4,782; the tax is still right).
+    assert [c["code"] for c in out["caveats"]] == ["qualified_dividends_mismatch"]
 
 
 # ── Cases + intake + review (Phase 2) ─────────────────────────────────────

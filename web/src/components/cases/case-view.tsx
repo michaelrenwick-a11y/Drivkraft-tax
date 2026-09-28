@@ -1,20 +1,21 @@
 "use client";
 
-import { ArrowRight, BookOpen, FolderDown, Calculator, Check, ChevronLeft, Clock, FileCode2, FilePlus2, FileText, Lock, NotebookPen, Send } from "lucide-react";
+import { ArrowRight, BookOpen, FolderDown, Calculator, Check, ChevronLeft, Clock, FileCode2, FilePlus2, FileText, Lock, NotebookPen, Send, Upload } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type DragEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { CaseStatusPill, DocStatusPill } from "@/components/ui/doc-status";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
-import { api, FILING_STATUS_LABELS, useApi, type ApiError, type CaseSummary, type ChecklistItem, type DocSummary } from "@/lib/api";
+import { api, FILING_STATUS_LABELS, useApi, type ApiError, type CaseSummary, type ChecklistItem, type DocSummary, type SourceDoc } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { displayName, relativeTime } from "@/lib/format";
 import { AddK1Dialog } from "./add-k1-dialog";
 import { ExtractionProgress } from "./extraction-progress";
+import { hasFiles, SourceDocuments, useSourceUpload } from "./source-documents";
 
 export function CaseView({ caseId, openAdd }: { caseId: string; openAdd: boolean }) {
   const router = useRouter();
@@ -23,6 +24,14 @@ export function CaseView({ caseId, openAdd }: { caseId: string; openAdd: boolean
   const { data, error, loading, reload } = useApi<CaseSummary>(`/cases/${caseId}`, {
     poll: (d) => d.documents.some((doc) => doc.status === "extracting"),
   });
+  const sources = useApi<{ source_documents: SourceDoc[] }>(`/cases/${caseId}/sources`, {
+    poll: (d) => d.source_documents.some((s) => s.document?.status === "extracting"),
+  });
+  const reloadSources = sources.reload;
+  const reloadAll = useCallback(() => {
+    void reload();
+    void reloadSources();
+  }, [reload, reloadSources]);
 
   // Drop ?add=1 once the dialog has opened, so a reload doesn't reopen it.
   useEffect(() => {
@@ -31,6 +40,19 @@ export function CaseView({ caseId, openAdd }: { caseId: string; openAdd: boolean
 
   // Announce when an extraction finishes.
   const watching = useRef<Set<string>>(new Set());
+  const { upload, progress } = useSourceUpload(
+    caseId,
+    useCallback(
+      (added: SourceDoc[]) => {
+        for (const s of added) if (s.document?.status === "extracting") watching.current.add(s.document.id);
+        reloadAll();
+      },
+      [reloadAll],
+    ),
+  );
+  // The whole page is a drop target while files are dragged over it.
+  const [dragging, setDragging] = useState(false);
+  const dragDepth = useRef(0);
   useEffect(() => {
     if (!data) return;
     for (const d of data.documents) {
@@ -58,8 +80,11 @@ export function CaseView({ caseId, openAdd }: { caseId: string; openAdd: boolean
   const allApproved = documents.length > 0 && documents.every((d) => d.status === "approved");
 
   const anyApproved = documents.some((d) => d.status === "approved");
+  const canCalculate = anyApproved || (data.inputs ?? 0) > 0;
+  const sourceList = sources.data?.source_documents ?? [];
+  const empty = documents.length === 0 && sourceList.length === 0;
   const toReturn = (
-    <Button variant={allApproved || c.read_only ? "primary" : "secondary"} onClick={() => router.push(`/cases/${caseId}/return`)}>
+    <Button variant={allApproved || c.read_only || (!next && canCalculate) ? "primary" : "secondary"} onClick={() => router.push(`/cases/${caseId}/return`)}>
       <Calculator className="size-4" aria-hidden />
       {c.read_only ? "View return" : "Calculate return"}
     </Button>
@@ -67,18 +92,50 @@ export function CaseView({ caseId, openAdd }: { caseId: string; openAdd: boolean
   const primary =
     !c.read_only && next ? (
       <>
-        {anyApproved && toReturn}
+        {canCalculate && toReturn}
         <Button variant="primary" onClick={() => router.push(`/cases/${caseId}/k1/${next.id}`)}>
           Review K-1
           <ArrowRight className="size-4" aria-hidden />
         </Button>
       </>
-    ) : anyApproved ? (
+    ) : canCalculate ? (
       toReturn
     ) : null;
 
+  const dropHandlers = c.read_only
+    ? {}
+    : {
+        onDragEnter: (e: DragEvent) => {
+          if (!hasFiles(e)) return;
+          dragDepth.current += 1;
+          setDragging(true);
+        },
+        onDragOver: (e: DragEvent) => {
+          if (hasFiles(e)) e.preventDefault();
+        },
+        onDragLeave: () => {
+          dragDepth.current = Math.max(0, dragDepth.current - 1);
+          if (dragDepth.current === 0) setDragging(false);
+        },
+        onDrop: (e: DragEvent) => {
+          e.preventDefault();
+          dragDepth.current = 0;
+          setDragging(false);
+          void upload(e.dataTransfer.files);
+        },
+      };
+
   return (
-    <div className="mx-auto max-w-5xl px-4 py-6 sm:px-8 sm:py-8">
+    <div className="relative mx-auto min-h-full max-w-5xl px-4 py-6 sm:px-8 sm:py-8" {...dropHandlers}>
+      {dragging && (
+        <div className="pointer-events-none fixed inset-0 z-40 flex items-center justify-center bg-primary/10 p-6 backdrop-blur-[1px]" aria-hidden>
+          <div className="flex flex-col items-center gap-2 rounded-xl border-2 border-dashed border-primary bg-surface px-10 py-8 text-center shadow-lg">
+            <Upload className="size-6 text-primary" aria-hidden />
+            <p className="text-base font-semibold text-fg">Drop to add to {c.name}</p>
+            <p className="text-sm text-fg-muted">W-2 · 1099-INT · 1099-DIV/B · 1098 · K-1 · client organizer (synthetic PDFs)</p>
+          </div>
+        </div>
+      )}
       <Link href="/cases" className="inline-flex items-center gap-1 text-sm text-fg-muted hover:text-fg">
         <ChevronLeft className="size-4" aria-hidden />
         Cases
@@ -114,36 +171,47 @@ export function CaseView({ caseId, openAdd }: { caseId: string; openAdd: boolean
             <FolderDown className="size-4" aria-hidden />
             Outputs
           </Button>
-          {!c.read_only && anyApproved && (
+          {!c.read_only && canCalculate && (
             <Button variant="ghost" onClick={() => router.push(`/cases/${caseId}/efile`)}>
               <Send className="size-4" aria-hidden />
               E-file
             </Button>
           )}
-          {!c.read_only && documents.length > 0 && (
+          {!c.read_only && !empty && (
             <Button onClick={() => setAddOpen(true)}>
               <FilePlus2 className="size-4" aria-hidden />
-              Add K-1
+              Add sample K-1
             </Button>
           )}
           {primary}
         </div>
       </div>
 
+      <SourceDocuments
+        caseId={caseId}
+        readOnly={c.read_only}
+        sources={sourceList}
+        upload={upload}
+        progress={progress}
+        onChanged={reloadAll}
+      />
+
       {documents.length === 0 ? (
-        <EmptyState
-          icon={FilePlus2}
-          title="Add the first K-1"
-          className="py-12"
-          action={
-            <Button variant="primary" onClick={() => setAddOpen(true)} disabled={c.read_only}>
-              <FilePlus2 className="size-4" aria-hidden />
-              Add K-1
-            </Button>
-          }
-        >
-          Pick a bundled synthetic K-1. The PDF sample runs the full open-source extraction, and you can watch each stage.
-        </EmptyState>
+        empty && !c.read_only ? (
+          <EmptyState
+            icon={FilePlus2}
+            title="Or start from a bundled K-1"
+            className="py-10"
+            action={
+              <Button onClick={() => setAddOpen(true)}>
+                <FilePlus2 className="size-4" aria-hidden />
+                Add sample K-1
+              </Button>
+            }
+          >
+            The Copperleaf PDF sample runs the full open-source extraction, and you can watch each stage.
+          </EmptyState>
+        ) : null
       ) : (
         <section aria-labelledby="k1s" className="mt-8">
           <h2 id="k1s" className="text-sm font-semibold text-fg">

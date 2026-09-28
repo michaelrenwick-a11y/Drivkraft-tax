@@ -1,0 +1,194 @@
+{
+  "year": 2025,
+  "source": "synthetic",
+  "scenario": "Holloway MFJ: 2 W-2s, 1099-INT, 1099-DIV/B, 1098, K-1 1065, 2 kids, child care",
+  "forms": [
+    {
+      "node_type": "start",
+      "data": {
+        "general": {
+          "filing_status": "mfj",
+          "taxpayer_first_name": "Daniel",
+          "taxpayer_last_name": "Holloway",
+          "spouse_first_name": "Priya",
+          "spouse_last_name": "Holloway",
+          "address_city": "Ann Arbor",
+          "address_state": "MI",
+          "address_zip": "48104"
+        }
+      }
+    },
+    {
+      "node_type": "w2",
+      "data": {
+        "employer_name": "GREAT LAKES MOBILITY SYSTEMS INC",
+        "employer_ein": "38-7215560",
+        "box1_wages": 128400.0,
+        "box2_fed_withheld": 16850.0,
+        "box3_ss_wages": 146900.0,
+        "box4_ss_withheld": 9107.8,
+        "box5_medicare_wages": 146900.0,
+        "box6_medicare_withheld": 2130.05,
+        "box12_entries": [
+          {
+            "code": "D",
+            "amount": 18500.0
+          },
+          {
+            "code": "DD",
+            "amount": 14216.4
+          }
+        ],
+        "box13_retirement_plan": true,
+        "box15_state": "MI",
+        "box16_state_wages": 128400.0,
+        "box17_state_withheld": 5457.0
+      }
+    },
+    {
+      "node_type": "w2",
+      "data": {
+        "employer_name": "HURON VALLEY HEALTH SYSTEM",
+        "employer_ein": "38-6410927",
+        "box1_wages": 76300.0,
+        "box2_fed_withheld": 7940.0,
+        "box3_ss_wages": 82300.0,
+        "box4_ss_withheld": 5102.6,
+        "box5_medicare_wages": 82300.0,
+        "box6_medicare_withheld": 1193.35,
+        "box12_entries": [
+          {
+            "code": "E",
+            "amount": 6000.0
+          },
+          {
+            "code": "DD",
+            "amount": 9874.2
+          }
+        ],
+        "box13_retirement_plan": true,
+        "box14_entries": [
+          {
+            "description": "UNION",
+            "amount": 780.0,
+            "is_state_sdi_pfml": false
+          }
+        ],
+        "box15_state": "MI",
+        "box16_state_wages": 76300.0,
+        "box17_state_withheld": 3242.75
+      }
+    },
+    {
+      "node_type": "f1099int",
+      "data": {
+        "payer_name": "LAKESHORE COMMUNITY CREDIT UNION",
+        "payer_tin": "38-2093315",
+        "box1": 1184.22
+      }
+    },
+    {
+      "node_type": "f1099div",
+      "data": {
+        "payerName": "NORTHPOINT BROKERAGE SERVICES LLC",
+        "box1a": 3412.87,
+        "box1b": 2905.14,
+        "box2a": 488.0,
+        "box7": 41.19
+      }
+    },
+    {
+      "node_type": "f1099b",
+      "data": {
+        "payer_name": "NORTHPOINT BROKERAGE SERVICES LLC",
+        "description": "40 SH NORTHPOINT GROWTH ETF (NPGX)",
+        "date_acquired": "02/11/2025",
+        "date_sold": "09/03/2025",
+        "proceeds": 6420.55,
+        "cost_basis": 5980.0,
+        "is_long_term": false,
+        "noncovered_security": false
+      }
+    },
+    {
+      "node_type": "f1099b",
+      "data": {
+        "payer_name": "NORTHPOINT BROKERAGE SERVICES LLC",
+        "description": "25 SH CEDARLINE SEMICONDUCTOR (CDLS)",
+        "date_acquired": "03/20/2025",
+        "date_sold": "11/14/2025",
+        "proceeds": 2110.0,
+        "cost_basis": 2655.3,
+        "is_long_term": false,
+        "noncovered_security": false
+      }
+    },
+    {
+      "node_type": "f1099b",
+      "data": {
+        "payer_name": "NORTHPOINT BROKERAGE SERVICES LLC",
+        "description": "150 SH NORTHPOINT TOTAL MKT IDX (NPTM)",
+        "date_acquired": "08/05/2019",
+        "date_sold": "06/18/2025",
+        "proceeds": 18750.0,
+        "cost_basis": 11204.6,
+        "is_long_term": true,
+        "noncovered_security": false
+      }
+    },
+    {
+      "node_type": "f1099b",
+      "data": {
+        "payer_name": "NORTHPOINT BROKERAGE SERVICES LLC",
+        "description": "60 SH HARBOR BAY UTILITIES (HBU)",
+        "date_acquired": "01/12/2021",
+        "date_sold": "12/08/2025",
+        "proceeds": 9300.25,
+        "cost_basis": 10120.0,
+        "is_long_term": true,
+        "noncovered_security": false
+      }
+    },
+    {
+      "node_type": "f1098",
+      "data": {
+        "lender_name": "WOLVERINE HOME LENDING NA",
+        "box1_mortgage_interest": 11862.4,
+        "box2_outstanding_principal": 318450.0,
+        "box3_origination_date": "2021-06-14",
+        "box10_other": 6214.0
+      }
+    },
+    {
+      "node_type": "k1_partnership",
+      "data": {
+        "partnership_name": "RIVERBEND GROWTH PARTNERS II LP",
+        "partnership_ein": "47-2281946",
+        "box1_ordinary_business": 4210.0,
+        "box5_interest": 86.0,
+        "box6a_ordinary_dividends": 212.0,
+        "box6b_qualified_dividends": 180.0,
+        "box9a_net_lt_cap_gain": 1140.0
+      }
+    },
+    {
+      "node_type": "f2441",
+      "data": {
+        "provider": "Little Oaks Learning Center",
+        "provider_ein": "38-3902217",
+        "amount": 7800.0,
+        "qualifying_persons": 1
+      }
+    },
+    {
+      "node_type": "schedule_a",
+      "data": {
+        "cash_contributions": 3600.0,
+        "noncash_contributions": 420.0,
+        "real_estate_taxes": 6214.0,
+        "state_income_tax": 8699.75
+      }
+    }
+  ],
+  "_notes": "Field names for w2/1099/1098/k1 follow benchmark input.json + node schemas; f2441/schedule_a data keys are approximate - check the node schema before feeding to the CLI."
+}

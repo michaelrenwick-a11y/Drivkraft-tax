@@ -12,11 +12,23 @@ export function money(v: number): string {
   return v < 0 ? `(${s})` : s;
 }
 
-/** Display any K-1 value: amounts, text, checkboxes, empty. */
+const SHARE_KEY = /^(profit|loss|capital)_(beginning|ending)$/;
+
+/** Display any K-1 value: amounts, text, checkboxes, empty, and Part II's structured
+ *  items (share %, liabilities, capital account) as "key value · key value". */
 export function display(v: unknown): string {
   if (v === null || v === undefined) return "—";
   if (typeof v === "boolean") return v ? "Checked" : "Not checked";
   if (isAmount(v)) return money(v);
+  if (typeof v === "object" && !Array.isArray(v)) {
+    const parts = Object.entries(v as Record<string, unknown>)
+      .filter(([, x]) => x !== null && x !== undefined && x !== false)
+      .map(([k, x]) => {
+        const shown = SHARE_KEY.test(k) && isAmount(x) ? `${+(x * 100).toFixed(4)}%` : display(x);
+        return `${k.replaceAll("_", " ")} ${shown}`;
+      });
+    return parts.length ? parts.join(" · ") : "—";
+  }
   return String(v);
 }
 

@@ -5,6 +5,11 @@ import type { NextConfig } from "next";
 const API_ORIGIN = process.env.DRIVKRAFT_API ?? "http://127.0.0.1:8787";
 
 const nextConfig: NextConfig = {
+  experimental: {
+    // Source-document drops are base64 JSON: the bundled Copperleaf K-1 package is ~13 MB
+    // encoded, over the 10 MB default, which cuts the proxied body off mid-stream.
+    proxyClientMaxBodySize: "20mb",
+  },
   async rewrites() {
     return [{ source: "/api/:path*", destination: `${API_ORIGIN}/api/:path*` }];
   },

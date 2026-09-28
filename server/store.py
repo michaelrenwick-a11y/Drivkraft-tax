@@ -59,6 +59,21 @@ CREATE TABLE IF NOT EXISTS inputs (
   node_type TEXT NOT NULL,
   data TEXT NOT NULL,              -- JSON
   label TEXT,
+  source_id TEXT,                  -- the dropped source document it came from (NULL: set_return_inputs)
+  created TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS source_docs (
+  id TEXT PRIMARY KEY,
+  case_id TEXT NOT NULL REFERENCES cases(id),
+  filename TEXT NOT NULL,
+  sha256 TEXT NOT NULL,
+  form TEXT,                       -- w2 | 1099-int | 1099-div | 1098 | k1-1065 | organizer (NULL when refused early)
+  label TEXT,
+  status TEXT NOT NULL,            -- added | k1 (see doc_id) | refused
+  fields TEXT NOT NULL DEFAULT '[]',        -- JSON: [{box, label, value}] as read from the PDF
+  warnings TEXT NOT NULL DEFAULT '[]',      -- JSON
+  error TEXT,                      -- JSON: {code, message, fix_hint} when refused
+  doc_id TEXT,                     -- the K-1 document a K-1 became
   created TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS scenarios (
@@ -225,6 +240,8 @@ def configure(root: Path | None = None) -> Path:
         for table in ("cases", "research"):      # Phase 10: owner column on older databases
             if "owner" not in {r[1] for r in db.execute(f"PRAGMA table_info({table})")}:
                 db.execute(f"ALTER TABLE {table} ADD COLUMN owner TEXT")
+        if "source_id" not in {r[1] for r in db.execute("PRAGMA table_info(inputs)")}:   # Phase 11
+            db.execute("ALTER TABLE inputs ADD COLUMN source_id TEXT")
     return _root
 
 
@@ -276,7 +293,7 @@ def _row(r: sqlite3.Row | None) -> dict | None:
     d = dict(r)
     for k in ("progress", "acknowledged", "old_value", "new_value", "data", "changes", "citations", "steps",
               "payload", "result", "attendees", "segments", "analysis", "meta", "items", "warnings",
-              "filer", "checks", "signature", "submission", "timeline"):
+              "filer", "checks", "signature", "submission", "timeline", "fields", "error"):
         if k in d and isinstance(d[k], str):
             d[k] = json.loads(d[k])
     if "cached" in d:
@@ -382,10 +399,11 @@ def list_edits(doc_id: str) -> list[dict]:
         return [_row(r) for r in db.execute("SELECT * FROM edits WHERE doc_id = ? ORDER BY id", (doc_id,))]
 
 
-def insert_input(case_id: str, node_type: str, data: dict, label: str | None = None) -> int:
+def insert_input(case_id: str, node_type: str, data: dict, label: str | None = None,
+                 source_id: str | None = None) -> int:
     with connect() as db:
-        cur = db.execute("INSERT INTO inputs (case_id, node_type, data, label, created) VALUES (?, ?, ?, ?, ?)",
-                         (case_id, node_type, json.dumps(data), label, now()))
+        cur = db.execute("INSERT INTO inputs (case_id, node_type, data, label, source_id, created)"
+                         " VALUES (?, ?, ?, ?, ?, ?)", (case_id, node_type, json.dumps(data), label, source_id, now()))
         return cur.lastrowid
 
 
@@ -395,12 +413,51 @@ def list_inputs(case_id: str) -> list[dict]:
 
 
 def replace_inputs(case_id: str, rows: list[tuple[str, dict, str | None]]) -> list[int]:
-    """Swap all of a case's inputs in one transaction."""
+    """Swap a case's hand-entered inputs in one transaction. Inputs that came from a
+    dropped source document stay (remove the document to remove them)."""
     ts = now()
     with connect() as db:
-        db.execute("DELETE FROM inputs WHERE case_id = ?", (case_id,))
+        db.execute("DELETE FROM inputs WHERE case_id = ? AND source_id IS NULL", (case_id,))
         return [db.execute("INSERT INTO inputs (case_id, node_type, data, label, created) VALUES (?, ?, ?, ?, ?)",
                            (case_id, node, json.dumps(data), label, ts)).lastrowid for node, data, label in rows]
+
+
+def insert_source(s: dict) -> dict:
+    row = {"form": None, "label": None, "fields": [], "warnings": [], "error": None, "doc_id": None,
+           "created": now(), **s}
+    with connect() as db:
+        db.execute("INSERT INTO source_docs (id, case_id, filename, sha256, form, label, status, fields, warnings,"
+                   " error, doc_id, created) VALUES (:id, :case_id, :filename, :sha256, :form, :label, :status,"
+                   " :fields, :warnings, :error, :doc_id, :created)",
+                   {**row, "fields": json.dumps(row["fields"]), "warnings": json.dumps(row["warnings"]),
+                    "error": None if row["error"] is None else json.dumps(row["error"])})
+    return row
+
+
+def get_source(source_id: str) -> dict | None:
+    with connect() as db:
+        row = _row(db.execute("SELECT * FROM source_docs WHERE id = ?", (source_id,)).fetchone())
+    return _scoped(row)
+
+
+def list_sources(case_id: str) -> list[dict]:
+    with connect() as db:
+        return [_row(r) for r in db.execute("SELECT * FROM source_docs WHERE case_id = ? ORDER BY created, rowid",
+                                            (case_id,))]
+
+
+def delete_source(source_id: str) -> None:
+    """Delete a source document with the inputs it made (its K-1, if any, is the caller's)."""
+    with connect() as db:
+        db.execute("DELETE FROM inputs WHERE source_id = ?", (source_id,))
+        db.execute("DELETE FROM source_docs WHERE id = ?", (source_id,))
+
+
+def delete_document(doc_id: str) -> None:
+    with connect() as db:
+        db.execute("DELETE FROM edits WHERE doc_id = ?", (doc_id,))
+        db.execute("DELETE FROM proposals WHERE doc_id = ?", (doc_id,))
+        db.execute("DELETE FROM documents WHERE id = ?", (doc_id,))
 
 
 def insert_scenario(case_id: str, name: str, changes: dict) -> dict:
@@ -700,7 +757,7 @@ def reset() -> None:
     """Delete every case, document, edit, input, scenario, note and event, and the case folders.
     The caller re-seeds the reference cases. ai_usage is kept: it's the spend record."""
     with connect() as db:
-        for table in ("filings", "efile_db", "changesets", "outputs", "checklist", "notes", "research", "proposals", "edits", "inputs", "scenarios", "documents", "cases", "events"):
+        for table in ("filings", "efile_db", "changesets", "outputs", "checklist", "notes", "research", "proposals", "edits", "inputs", "source_docs", "scenarios", "documents", "cases", "events"):
             db.execute(f"DELETE FROM {table}")
     shutil.rmtree(root() / "cases", ignore_errors=True)
 
@@ -713,7 +770,7 @@ def delete_cases(case_ids: list[str]) -> None:
     with connect() as db:
         db.execute(f"DELETE FROM edits WHERE doc_id IN (SELECT id FROM documents WHERE case_id IN ({marks}))", case_ids)
         for table in ("filings", "efile_db", "changesets", "outputs", "checklist", "notes", "research", "proposals",
-                      "inputs", "scenarios", "documents"):
+                      "inputs", "source_docs", "scenarios", "documents"):
             db.execute(f"DELETE FROM {table} WHERE case_id IN ({marks})", case_ids)
         db.execute(f"DELETE FROM cases WHERE id IN ({marks})", case_ids)
     for cid in case_ids:

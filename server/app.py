@@ -34,6 +34,7 @@ from .tools import k1 as k1_tools
 from .tools import notes as note_tools
 from .tools import outputs as output_tools
 from .tools import research as research_tools
+from .tools import sources as source_tools
 
 HOST = os.environ.get("DRIVKRAFT_HOST", "127.0.0.1")
 PORT = int(os.environ.get("DRIVKRAFT_PORT", "8787"))
@@ -42,6 +43,8 @@ INSTRUCTIONS = """Drivkraft Tax: a practice build that takes a Schedule K-1 (For
 to OTD (Open Tax Document) data to an OpenTax 1040 calculation. Synthetic data only.
 
 Start with list_cases. Reference cases are read-only; create_case + intake_k1 to work on your own.
+Source documents: add_source_document takes a synthetic PDF (W-2, 1099-INT, 1099-DIV/B, 1098, K-1, client
+organizer) as base64; forms become return inputs, a K-1 becomes an OTD document to review and approve.
 Boxes are addressed by OTD paths (part_iii.box_1, part_iii.box_11.A, part_i.item_b).
 To answer "what on this K-1 isn't in the calculation?", call bridge_k1: every
 calculation_incomplete flag names a box OpenTax can't take, and not_in_calculation lists the amounts.
@@ -271,7 +274,7 @@ def build_http():
                 except ValidationError as exc:
                     raise ToolFailure("bad_argument", f"{name}: {exc.errors()[0]['msg']}", f"Check {name}.",
                                       status=422)
-            if spec.name == "intake_k1" and "wait" not in raw:
+            if spec.name in ("intake_k1", "add_source_document") and "wait" not in raw:
                 kwargs["wait"] = False    # the web polls progress instead of holding the request
             channel.set("http")
             return await run_in_threadpool(_call, spec, "http", kwargs)
@@ -353,6 +356,14 @@ def build_http():
             raise ToolFailure("no_pdf", "This K-1 has no source PDF", "OTD samples have no pages to show.", status=404)
         png = k1doc.render_page(pdf, page, ddir / "pages")
         return FileResponse(png, media_type="image/png", headers={"Cache-Control": "public, max-age=86400, immutable"})
+
+    @app.get("/api/sources/{source_id}/pdf")
+    def source_pdf(source_id: str):
+        s = source_tools.require_source(source_id)
+        path = source_tools._pdf_path(s)
+        if not path.exists():
+            raise ToolFailure("file_missing", "No PDF is stored for this document", "Refused drops aren't kept.", status=404)
+        return FileResponse(path, media_type="application/pdf", filename=s["filename"], content_disposition_type="inline")
 
     @app.get("/api/outputs/{output_id}/download")
     def download_output(output_id: str, inline: bool = False):

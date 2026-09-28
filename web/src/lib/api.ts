@@ -112,8 +112,32 @@ export type K1Full = {
 export type CaseSummary = {
   case: Case;
   documents: DocSummary[];
+  inputs: number;
+  source_documents: number;
   open_items: { doc_id: string; kind: string; text: string }[];
   next_action: string;
+};
+
+/* ── Source documents (Phase 11) ───────────────────────────────────────── */
+
+export type SourceForm = "w2" | "1099-int" | "1099-div" | "1098" | "k1-1065" | "organizer";
+
+export type SourceDoc = {
+  id: string;
+  case_id: string;
+  filename: string;
+  form: SourceForm | null;
+  form_title: string;
+  label: string | null;
+  status: "added" | "k1" | "refused";
+  fields: { box: string; label: string; value: string | number }[];
+  warnings: string[];
+  error: ToolError | null;
+  inputs: { id: number; node_type: string; label: string | null }[];
+  doc_id: string | null;
+  document?: DocSummary | null;
+  has_pdf: boolean;
+  created: string;
 };
 
 /* ── Return (Phase 3) ─────────────────────────────────────────────────── */

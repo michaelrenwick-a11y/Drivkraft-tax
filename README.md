@@ -6,7 +6,7 @@ A practice build on the Open Tax Technology Alliance's open code: the [OTD](http
 
 > **Synthetic data only.** Every client, K-1 and figure is made up. It isn't tax advice, and nothing is ever sent to the IRS. This is an independent project, not affiliated with or endorsed by Filed or Crimson Tree Software.
 
-**Live demo:** [drivkraft-tax-ix69.vercel.app](https://drivkraft-tax-ix69.vercel.app) · **Case study:** [build log](https://claude.ai/artifact/HR6Jmik1tiGXsUkN9rfxhh) · **2-minute video:** _link_
+**Live demo:** [drivkraft-tax-ix69.vercel.app](https://drivkraft-tax-ix69.vercel.app) · **Case study:** [build log](https://drivkraft-tax-ix69.vercel.app/case-study) · **2-minute video:** _link_
 
 ## What it does
 

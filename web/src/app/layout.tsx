@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Providers } from "@/components/providers";
-import { AppShell } from "@/components/shell/app-shell";
+import { ShellGate } from "@/components/shell/shell-gate";
 import { THEME_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
@@ -40,7 +40,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="h-full">
         <Providers>
-          <AppShell>{children}</AppShell>
+          <ShellGate>{children}</ShellGate>
         </Providers>
       </body>
     </html>

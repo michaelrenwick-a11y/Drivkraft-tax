@@ -550,10 +550,6 @@ cd web && npm install && npm run dev`}</pre>
           <div className="cs-section-head">
             <div className="cs-eyebrow">About</div>
             <h2>Michael Renwick</h2>
-            <p>
-              Solutions Engineer in accounting and tax technology, and founder of Drivkraft LLC. This build is one
-              weekend of practice; the rest of my work lives in the two places below.
-            </p>
           </div>
           <div className="cs-about-grid">
             <a
@@ -583,11 +579,24 @@ cd web && npm install && npm run dev`}</pre>
                 <span className="cs-about-sub">drivkraft.io</span>
               </span>
             </a>
+            <a className="cs-about-card" href="mailto:michael@drivkraft.io">
+              <span className="cs-about-icon cs-about-icon-mail" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="5" width="18" height="14" rx="2" />
+                  <path d="m3 7 9 6 9-6" />
+                </svg>
+              </span>
+              <span className="cs-about-text">
+                <span className="cs-about-title">Email me</span>
+                <span className="cs-about-sub">michael@drivkraft.io</span>
+              </span>
+            </a>
           </div>
           <p className="cs-about-blurb">
             <strong>Drivkraft</strong> is Danish for the driving force that powers a machine or carries a business
             or a person forward — and it&apos;s your everyday advisor. It keeps the business owner and their
-            professional advisors aligned and informed.
+            professional advisors aligned and informed, so nothing gets lost between the books, the return and the
+            conversation about what comes next.
           </p>
           <p className="cs-about-cta">
             Like what you saw here? <a href="https://drivkraft.io" target="_blank" rel="noopener noreferrer">See what else I&apos;ve built at drivkraft.io ↗</a>
@@ -809,8 +818,8 @@ html{scroll-behavior:smooth;}
   font-family:"IBM Plex Mono"; font-size:12px; overflow-x:auto; margin:10px 0 0; color:var(--cs-ink);
 }
 
-.cs-about-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px;}
-@media (max-width:640px){ .cs-about-grid{grid-template-columns:1fr;} }
+.cs-about-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:24px;}
+@media (max-width:760px){ .cs-about-grid{grid-template-columns:1fr;} }
 .cs-about-card{
   display:flex; align-items:center; gap:16px; padding:20px; border:1px solid var(--cs-line); border-radius:12px;
   background:var(--cs-panel); text-decoration:none; box-shadow:var(--cs-shadow);
@@ -821,12 +830,13 @@ html{scroll-behavior:smooth;}
 .cs-about-icon svg{width:26px; height:26px;}
 .cs-about-icon-li{background:#0a66c2;}
 .cs-about-icon-dk{background:var(--cs-accent);}
+.cs-about-icon-mail{background:var(--cs-trace);}
 .cs-about-text{display:flex; flex-direction:column; gap:2px;}
 .cs-about-title{font-family:"Fraunces",Georgia,serif; font-weight:600; font-size:18px; color:var(--cs-ink);}
 .cs-about-sub{font-family:"IBM Plex Mono"; font-size:12.5px; color:var(--cs-muted);}
-.cs-about-blurb{max-width:62ch; color:var(--cs-muted); font-size:15px; margin:0 0 14px;}
+.cs-about-blurb{width:100%; color:var(--cs-muted); font-size:16px; line-height:1.65; margin:0 0 20px;}
 .cs-about-blurb strong{color:var(--cs-ink);}
-.cs-about-cta{font-size:15px; margin:0; font-weight:500;}
+.cs-about-cta{font-size:16px; margin:0; font-weight:500; text-align:center;}
 .cs-about-cta a{color:var(--cs-accent-ink); text-decoration:underline; text-underline-offset:3px;}
 
 .cs-credit-list{color:var(--cs-muted); font-size:13.5px; margin:0; padding-left:18px;}

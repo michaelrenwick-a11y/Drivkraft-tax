@@ -1,9 +1,11 @@
-"""Meeting notes (Phase 6): add, search and analyze notes; the case's document checklist.
+"""Meeting notes (Phase 6): add, search and analyze notes; the case's checklist
+(document requests from the client, decisions turned into preparer to-dos).
 
-analyze_meeting turns a note into proposals (document requests, scenarios, research
-questions, a follow-up draft) that wait in the Inbox like K-1 edits do. Nothing in
-an analysis changes the case until a person accepts it, and research questions
-never run on their own (accept_proposal decides; live ones need the Research page).
+analyze_meeting turns a note into proposals (document requests, decisions, scenarios,
+research questions, a follow-up draft) that wait in the Inbox like K-1 edits do.
+Nothing in an analysis changes the case until a person accepts it, and research
+questions never run on their own (accept_proposal decides; live ones need the
+Research page).
 """
 from __future__ import annotations
 
@@ -222,6 +224,8 @@ def _propose(note: dict, analysis: dict) -> list[dict]:
     for d in (analysis.get("doc_requests") or [])[:notes.MAX_ITEMS]:
         add("doc_request", {"item": d["item"][:200], "detail": (d.get("detail") or "")[:500]},
             d.get("detail") or "Requested in the meeting.", d.get("segment"))
+    for d in (analysis.get("decisions") or [])[:notes.MAX_ITEMS]:
+        add("decision", {"text": d["text"][:300]}, "Agreed in the meeting.", d.get("segment"))
     for sc in (analysis.get("scenarios") or [])[:notes.MAX_ITEMS]:
         changes = _scenario_changes(case_id, sc)
         if changes:
@@ -245,11 +249,12 @@ def _analysis_out(note: dict, a: dict) -> dict:
 
 @tool("P", "Analyze a meeting", "POST", "/notes/{note_id}/analyze")
 def analyze_meeting(note_id: str, refresh: bool = False) -> dict:
-    """Turn a meeting note into a summary, decisions and proposals: document
-    requests (accepting adds them to the case checklist), what-if scenarios,
-    research questions and a follow-up email draft. Each item cites the moment in
-    the note (note://…#t=…). Nothing changes until a person accepts a proposal;
-    research questions never run on their own.
+    """Turn a meeting note into a summary and proposals: document requests and
+    decisions (accepting either adds a checklist item — a document request from
+    the client, a decision as a preparer to-do), what-if scenarios, research
+    questions and a follow-up email draft. Each item cites the moment in the note
+    (note://…#t=…). Nothing changes until a person accepts a proposal; research
+    questions never run on their own.
 
     Uses Claude (needs ANTHROPIC_API_KEY) except for the bundled sample note, whose
     analysis is cached. A note is analyzed once; refresh=true re-runs it and

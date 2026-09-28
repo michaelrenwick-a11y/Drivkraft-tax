@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, BookOpen, Check, ClipboardCheck, Copy, FileQuestion, FlaskConical, Loader2, Mail, NotebookPen, Sparkles, Undo2, X } from "lucide-react";
+import { ArrowRight, BookOpen, Check, ClipboardCheck, Copy, FileQuestion, FlaskConical, ListTodo, Loader2, Mail, NotebookPen, Sparkles, Undo2, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
@@ -16,6 +16,7 @@ export type ProposalAction = "accept" | "reject" | "undo";
 const KIND_ICON = {
   k1_edit: Sparkles,
   doc_request: FileQuestion,
+  decision: ListTodo,
   scenario: FlaskConical,
   research_question: BookOpen,
   follow_up: Mail,
@@ -83,6 +84,8 @@ export function useProposalActions(reload: () => Promise<unknown> | void) {
           return toast({ tone: "success", title: "Edit applied", body: what(p), action: undo });
         case "doc_request":
           return toast({ tone: "success", title: "Added to the case checklist", body: what(p), action: undo });
+        case "decision":
+          return toast({ tone: "success", title: "Added to the case to-dos", body: what(p), action: undo });
         case "scenario":
           return toast({ tone: "success", title: "Scenario saved", body: what(p), action: href ? { label: "View", onClick: () => router.push(href) } : undo });
         case "research_question":
@@ -169,7 +172,7 @@ export function ProposalCard({
 
       <Body p={p} />
 
-      {p.rationale && p.kind !== "follow_up" && p.kind !== "doc_request" && (
+      {p.rationale && p.kind !== "follow_up" && p.kind !== "doc_request" && p.kind !== "decision" && (
         <p className="mt-2 flex gap-2 text-sm leading-6 text-fg-muted">
           <Sparkles className="mt-1 size-3.5 shrink-0 text-ai-fg" aria-hidden />
           {p.rationale}
@@ -231,6 +234,7 @@ export function ProposalCard({
 const ACCEPT_LABEL: Record<Proposal["kind"], string> = {
   k1_edit: "Accept",
   doc_request: "Add to checklist",
+  decision: "Add to to-dos",
   scenario: "Save scenario",
   research_question: "Research it",
   follow_up: "Approve & copy",

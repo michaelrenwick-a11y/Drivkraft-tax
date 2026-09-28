@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, BookOpen, FolderDown, Calculator, Check, ChevronLeft, Clock, FileCode2, FilePlus2, FileText, Lock, NotebookPen, Send, Upload } from "lucide-react";
+import { ArrowRight, BookOpen, FolderDown, Calculator, Check, ChevronLeft, Clock, FileCode2, FilePlus2, FileText, ListTodo, Lock, NotebookPen, Send, Upload } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type DragEvent } from "react";
@@ -291,7 +291,8 @@ function DocCard({ doc, caseId, readOnly }: { doc: DocSummary; caseId: string; r
   );
 }
 
-/** Documents requested in meetings (accepted doc_request proposals), each linked to its moment. */
+/** Requested documents (client-facing) and to-dos (preparer follow-ups) — both from
+ * accepted meeting-note proposals, each linked to the moment it came from. */
 function Checklist({ caseId, readOnly, onChanged }: { caseId: string; readOnly: boolean; onChanged: () => Promise<unknown> | void }) {
   const toast = useToast();
   const { data, reload } = useApi<{ items: ChecklistItem[]; open: number }>(`/cases/${caseId}/checklist`);
@@ -309,13 +310,54 @@ function Checklist({ caseId, readOnly, onChanged }: { caseId: string; readOnly: 
       setBusy(null);
     }
   };
+  const documents = data.items.filter((i) => i.type !== "action");
+  const todos = data.items.filter((i) => i.type === "action");
   return (
-    <section id="checklist" aria-labelledby="checklist-h" className="mt-8 scroll-mt-6">
-      <h2 id="checklist-h" className="text-sm font-semibold text-fg">
-        Requested documents <span className="font-normal text-fg-muted">· {data.open} open</span>
+    <>
+      {documents.length > 0 && (
+        <ChecklistSection
+          id="checklist" title="Requested documents" items={documents} busy={busy} readOnly={readOnly} onToggle={toggle}
+          doneWord="received"
+        />
+      )}
+      {todos.length > 0 && (
+        <ChecklistSection
+          id="todos" title="To-dos" icon={ListTodo} items={todos} busy={busy} readOnly={readOnly} onToggle={toggle}
+          doneWord="done"
+        />
+      )}
+    </>
+  );
+}
+
+function ChecklistSection({
+  id,
+  title,
+  icon: Icon,
+  items,
+  busy,
+  readOnly,
+  onToggle,
+  doneWord,
+}: {
+  id: string;
+  title: string;
+  icon?: typeof ListTodo;
+  items: ChecklistItem[];
+  busy: string | null;
+  readOnly: boolean;
+  onToggle: (item: ChecklistItem) => void;
+  doneWord: "received" | "done";
+}) {
+  const open = items.filter((i) => i.status === "open").length;
+  return (
+    <section id={id} aria-labelledby={`${id}-h`} className="mt-8 scroll-mt-6">
+      <h2 id={`${id}-h`} className="flex items-center gap-1.5 text-sm font-semibold text-fg">
+        {Icon && <Icon className="size-4 text-fg-muted" aria-hidden />}
+        {title} <span className="font-normal text-fg-muted">· {open} open</span>
       </h2>
       <ul className="mt-3 divide-y divide-border rounded-lg border border-border bg-surface shadow-sm">
-        {data.items.map((item) => {
+        {items.map((item) => {
           const done = item.status === "received";
           return (
             <li key={item.id} className="flex items-start gap-3 px-4 py-3">
@@ -323,9 +365,9 @@ function Checklist({ caseId, readOnly, onChanged }: { caseId: string; readOnly: 
                 type="button"
                 role="checkbox"
                 aria-checked={done}
-                aria-label={`${item.item}: ${done ? "received" : "open"}`}
+                aria-label={`${item.item}: ${done ? doneWord : "open"}`}
                 disabled={readOnly || busy === item.id}
-                onClick={() => void toggle(item)}
+                onClick={() => void onToggle(item)}
                 className={cn(
                   "mt-0.5 inline-flex size-5 shrink-0 items-center justify-center rounded border transition-colors",
                   done ? "border-success-fg bg-success-bg text-success-fg" : "border-border-strong bg-surface hover:border-fg-muted",

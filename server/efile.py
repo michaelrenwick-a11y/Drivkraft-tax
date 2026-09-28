@@ -206,7 +206,7 @@ def checks(case: dict, built: dict) -> dict:
                              "message": f"{snapshot.display_name(inc['label'])}: {boxes} can't reach the return "
                                         "(OpenTax has no input for them), so the e-filed return leaves them out.",
                              "fix": {"label": "Open the K-1", "href": f"/cases/{cid}/k1/{inc['doc_id']}?box={paths[0]}"}})
-    open_items = [c for c in store.list_checklist(cid) if c["status"] == "open"]
+    open_items = [c for c in store.list_checklist(cid) if c["status"] == "open" and c["type"] != "action"]
     if open_items:
         warnings.append({"code": "checklist_open", "message": f"{len(open_items)} requested document"
                                                               f"{'s are' if len(open_items) != 1 else ' is'} still open.",

@@ -88,7 +88,7 @@ def test_cached_analysis_makes_proposals(rivera):
     assert out["analysis"]["cached"] and len(out["analysis"]["decisions"]) == 3
     assert out["analysis"]["decisions"][0]["source"]["label"].endswith("@ 03:18")
     kinds = [p["kind"] for p in out["proposals"]]
-    assert kinds.count("doc_request") == 2 and kinds.count("scenario") == 2
+    assert kinds.count("doc_request") == 2 and kinds.count("decision") == 3 and kinds.count("scenario") == 2
     assert kinds.count("research_question") == 2 and kinds.count("follow_up") == 1
     box13 = next(p for p in out["proposals"] if p["kind"] == "scenario" and "13 H" in p["label"])
     assert box13["payload"]["changes"] == {"k1_values": {doc["id"]: {"part_iii.box_13.H": None}}}
@@ -96,9 +96,9 @@ def test_cached_analysis_makes_proposals(rivera):
     assert out["proposals"][0]["citations"][0]["href"].startswith(f"/cases/{case['id']}/notes?note=")
     # Analyzing again returns the same proposals; refresh replaces the pending ones.
     again = call("analyze_meeting", n["id"])
-    assert again["already_analyzed"] and len(again["proposals"]) == 7
+    assert again["already_analyzed"] and len(again["proposals"]) == 10
     fresh = call("analyze_meeting", n["id"], refresh=True)
-    assert not fresh["already_analyzed"] and len(call("list_proposals", case["id"])["proposals"]) == 7
+    assert not fresh["already_analyzed"] and len(call("list_proposals", case["id"])["proposals"]) == 10
 
 
 def _pending(case_id: str, kind: str, contains: str = "") -> dict:
@@ -118,6 +118,20 @@ def test_accept_doc_request_adds_checklist(rivera):
     assert call("update_checklist_item", item["id"], "received")["item"]["status"] == "received"
     call("undo_proposal", p["id"])
     assert call("list_checklist", case["id"])["items"] == []
+
+
+def test_accept_decision_adds_todo(rivera):
+    case, _ = rivera
+    p = _pending(case["id"], "decision")
+    acc = call("accept_proposal", p["id"])
+    items = call("list_checklist", case["id"])
+    assert acc["proposal"]["status"] == "accepted"
+    item = next(i for i in items["items"] if i["id"] == acc["result"]["checklist_id"])
+    assert item["type"] == "action" and item["status"] == "open"
+    assert any(o["kind"] == "to_do" for o in call("get_case_summary", case["id"])["open_items"])
+    assert call("update_checklist_item", item["id"], "received")["item"]["status"] == "received"
+    call("undo_proposal", p["id"])
+    assert not any(i["id"] == item["id"] for i in call("list_checklist", case["id"])["items"])
 
 
 def test_accept_scenario_saves_it(rivera):
@@ -195,7 +209,7 @@ def test_live_analysis(rivera, monkeypatch):
     assert "[i=1]" in req["messages"][0]["content"]
     assert not out["analysis"]["cached"] and out["analysis"]["usage"] == {"input": 900, "output": 300}
     assert out["analysis"]["skipped_scenarios"] == ["Unexpressible"]
-    assert sorted(p["kind"] for p in out["proposals"]) == ["doc_request", "scenario"]
+    assert sorted(p["kind"] for p in out["proposals"]) == ["decision", "doc_request", "scenario"]
     assert out["proposals"][0]["citations"][0]["ref"] == f"note://{n['id']}#p=0"
 
 

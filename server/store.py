@@ -87,7 +87,7 @@ CREATE TABLE IF NOT EXISTS proposals (
   id TEXT PRIMARY KEY,
   case_id TEXT NOT NULL REFERENCES cases(id),
   doc_id TEXT REFERENCES documents(id),     -- k1_edit only
-  kind TEXT NOT NULL,              -- k1_edit | doc_request | scenario | research_question | follow_up
+  kind TEXT NOT NULL,              -- k1_edit | doc_request | decision | scenario | research_question | follow_up
   path TEXT,                       -- k1_edit only
   old_value TEXT,                  -- JSON: value when proposed
   new_value TEXT,                  -- JSON
@@ -121,6 +121,7 @@ CREATE TABLE IF NOT EXISTS checklist (
   case_id TEXT NOT NULL REFERENCES cases(id),
   item TEXT NOT NULL,
   detail TEXT,
+  type TEXT NOT NULL DEFAULT 'document',    -- document (from client) | action (preparer follow-up)
   status TEXT NOT NULL,            -- open | received
   source_ref TEXT,                 -- e.g. note://…#t=…
   proposal_id TEXT,
@@ -242,6 +243,8 @@ def configure(root: Path | None = None) -> Path:
                 db.execute(f"ALTER TABLE {table} ADD COLUMN owner TEXT")
         if "source_id" not in {r[1] for r in db.execute("PRAGMA table_info(inputs)")}:   # Phase 11
             db.execute("ALTER TABLE inputs ADD COLUMN source_id TEXT")
+        if "type" not in {r[1] for r in db.execute("PRAGMA table_info(checklist)")}:   # Phase 12
+            db.execute("ALTER TABLE checklist ADD COLUMN type TEXT NOT NULL DEFAULT 'document'")
     return _root
 
 
@@ -613,12 +616,12 @@ def delete_note(note_id: str) -> bool:
 
 def insert_checklist(item: dict) -> dict:
     ts = now()
-    row = {"detail": None, "status": "open", "source_ref": None, "proposal_id": None, "created": ts, "updated": ts,
-           **item}
+    row = {"detail": None, "type": "document", "status": "open", "source_ref": None, "proposal_id": None,
+           "created": ts, "updated": ts, **item}
     with connect() as db:
-        db.execute("INSERT INTO checklist (id, case_id, item, detail, status, source_ref, proposal_id, created,"
-                   " updated) VALUES (:id, :case_id, :item, :detail, :status, :source_ref, :proposal_id, :created,"
-                   " :updated)", row)
+        db.execute("INSERT INTO checklist (id, case_id, item, detail, type, status, source_ref, proposal_id,"
+                   " created, updated) VALUES (:id, :case_id, :item, :detail, :type, :status, :source_ref,"
+                   " :proposal_id, :created, :updated)", row)
     return row
 
 

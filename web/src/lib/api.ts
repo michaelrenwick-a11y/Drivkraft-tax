@@ -326,7 +326,7 @@ export const FILING_STATUS_LABELS: Record<FilingStatus, string> = {
 
 export type ProposalStatus = "pending" | "accepted" | "rejected";
 
-export type ProposalKind = "k1_edit" | "doc_request" | "scenario" | "research_question" | "follow_up";
+export type ProposalKind = "k1_edit" | "doc_request" | "decision" | "scenario" | "research_question" | "follow_up";
 export type Citation = Source & { href?: string | null };
 
 export type Proposal = {
@@ -342,8 +342,8 @@ export type Proposal = {
   partnership: string | null;
   old_value: number | string | boolean | null;
   new_value: number | string | boolean | null;
-  /** Meeting-note kinds: doc_request {item, detail} · scenario {name, changes} ·
-   *  research_question {question, mode} · follow_up {subject, body} */
+  /** Meeting-note kinds: doc_request {item, detail} · decision {text} ·
+   *  scenario {name, changes} · research_question {question, mode} · follow_up {subject, body} */
   payload: Record<string, unknown>;
   /** What an accept made: {checklist_id} · {scenario_id, href} · {research_id, cached, href} · {approved} */
   result: Record<string, unknown> | null;
@@ -419,6 +419,7 @@ export type ChecklistItem = {
   case_id: string;
   item: string;
   detail: string | null;
+  type: "document" | "action";
   status: "open" | "received";
   source_ref: string | null;
   source: Citation | null;

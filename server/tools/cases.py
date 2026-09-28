@@ -88,7 +88,8 @@ def get_case_summary(case_id: str) -> dict:
 
     Open items are the things blocking a ready return: refused K-1s, flags to
     acknowledge, K-1s awaiting approval, documents requested in meetings and not
-    yet received. Read-only and free.
+    yet received, and preparer to-dos from meeting decisions not yet done.
+    Read-only and free.
     """
     from .k1 import doc_out   # local import: k1 imports this module
 
@@ -108,7 +109,10 @@ def get_case_summary(case_id: str) -> dict:
             open_items.append({"doc_id": d["id"], "kind": "failed", "text": f"{name}: extraction failed"})
     for item in store.list_checklist(case_id):
         if item["status"] == "open":
-            open_items.append({"checklist_id": item["id"], "kind": "document_request", "text": f"Requested: {item['item']}"})
+            if item["type"] == "action":
+                open_items.append({"checklist_id": item["id"], "kind": "to_do", "text": f"To-do: {item['item']}"})
+            else:
+                open_items.append({"checklist_id": item["id"], "kind": "document_request", "text": f"Requested: {item['item']}"})
     inputs = store.list_inputs(case_id)
     return {
         "case": _case_out(case, docs),

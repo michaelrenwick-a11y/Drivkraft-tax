@@ -5,8 +5,9 @@ default"). Accepting runs edit_k1_value with the proposal's rationale as the
 reason, so the edit history and the K-1's original value stay intact; undo
 reverses the edit and puts the proposal back in the queue.
 
-Meeting analysis (Phase 6) adds four kinds, each accepted differently:
-  doc_request        → a case checklist item
+Meeting analysis (Phase 6) adds five kinds, each accepted differently:
+  doc_request        → a case checklist item (type "document": from the client)
+  decision           → a case checklist item (type "action": a preparer follow-up)
   scenario           → a saved scenario (run_scenario with a name)
   research_question  → tax_research when the question is cached (free); a live one
                        returns the Research page link, where a person confirms the cost
@@ -75,8 +76,8 @@ def _citation(ref: str) -> dict:
     return {"type": "other", "ref": ref, "label": ref, "href": None}
 
 
-KIND_LABELS = {"k1_edit": "K-1 edit", "doc_request": "Document request", "scenario": "Scenario",
-               "research_question": "Research question", "follow_up": "Follow-up email"}
+KIND_LABELS = {"k1_edit": "K-1 edit", "doc_request": "Document request", "decision": "Decision",
+               "scenario": "Scenario", "research_question": "Research question", "follow_up": "Follow-up email"}
 
 
 def _out(p: dict) -> dict:
@@ -90,7 +91,7 @@ def _out(p: dict) -> dict:
         except ToolFailure:
             label = p["path"]
     else:
-        label = pl.get("item") or pl.get("name") or pl.get("question") or pl.get("subject") or KIND_LABELS[p["kind"]]
+        label = pl.get("item") or pl.get("name") or pl.get("question") or pl.get("subject") or pl.get("text") or KIND_LABELS[p["kind"]]
     note = store.get_note(p["note_id"]) if p.get("note_id") else None
     case = store.get_case(p["case_id"])
     # Citations are stored at proposal time; refresh hrefs so they follow the current routes.
@@ -154,11 +155,11 @@ def list_proposals(case_id: str | None = None, status: str | None = "pending") -
 @tool("W", "Accept a proposal", "POST", "/proposals/{proposal_id}/accept")
 def accept_proposal(proposal_id: str) -> dict:
     """Apply a pending proposal. A K-1 edit becomes an edit (reason: the rationale;
-    refused if the value changed since). From meeting notes: a document request
-    joins the case checklist, a scenario is saved, a cached research question is
-    answered and saved (free), a live one returns `research_href` for the Research
-    page, where a person confirms the cost, and a follow-up draft is marked approved.
-    Writes; no cost.
+    refused if the value changed since). From meeting notes: a document request or
+    a decision joins the case checklist (as a document or action item), a scenario
+    is saved, a cached research question is answered and saved (free), a live one
+    returns `research_href` for the Research page, where a person confirms the cost,
+    and a follow-up draft is marked approved. Writes; no cost.
     """
     p = _require(proposal_id)
     if p["status"] != "pending":
@@ -193,7 +194,7 @@ def reject_proposal(proposal_id: str) -> dict:
 def undo_proposal(proposal_id: str) -> dict:
     """Put an accepted or rejected proposal back in the queue. Undoing a K-1 edit
     edits the value back (with a reason), so history is kept; undoing a document
-    request, scenario or cached research answer removes what the accept made.
+    request, decision, scenario or cached research answer removes what the accept made.
     Writes; no cost.
     """
     p = _require(proposal_id)
@@ -220,7 +221,12 @@ def _accept_other(p: dict) -> dict:
     extra: dict = {}
     if p["kind"] == "doc_request":
         item = store.insert_checklist({"id": store.new_id("chk"), "case_id": case["id"], "item": pl["item"],
-                                       "detail": pl.get("detail") or None, "source_ref": cite, "proposal_id": p["id"]})
+                                       "detail": pl.get("detail") or None, "type": "document",
+                                       "source_ref": cite, "proposal_id": p["id"]})
+        result = {"checklist_id": item["id"]}
+    elif p["kind"] == "decision":
+        item = store.insert_checklist({"id": store.new_id("chk"), "case_id": case["id"], "item": pl["text"],
+                                       "type": "action", "source_ref": cite, "proposal_id": p["id"]})
         result = {"checklist_id": item["id"]}
     elif p["kind"] == "scenario":
         from .returns import run_scenario
@@ -254,7 +260,7 @@ def _undo_other(p: dict) -> None:
 
     require_case(p["case_id"], writable=True)
     r = p.get("result") or {}
-    if p["kind"] == "doc_request" and r.get("checklist_id"):
+    if p["kind"] in ("doc_request", "decision") and r.get("checklist_id"):
         store.delete_checklist(r["checklist_id"])
     elif p["kind"] == "scenario" and r.get("scenario_id"):
         store.delete_scenario(r["scenario_id"])

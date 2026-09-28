@@ -30,6 +30,9 @@ export default function CaseStudyPage() {
             <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
               GitHub ↗
             </a>
+            <a className="cs-about-link" href="#about">
+              Michael Renwick · About
+            </a>
           </div>
         </div>
       </div>
@@ -542,6 +545,54 @@ cd web && npm install && npm run dev`}</pre>
             <li>Independent project — not affiliated with or endorsed by Filed or Crimson Tree Software.</li>
           </ul>
         </section>
+
+        <section id="about" className="cs-about">
+          <div className="cs-section-head">
+            <div className="cs-eyebrow">About</div>
+            <h2>Michael Renwick</h2>
+            <p>
+              Solutions Engineer in accounting and tax technology, and founder of Drivkraft LLC. This build is one
+              weekend of practice; the rest of my work lives in the two places below.
+            </p>
+          </div>
+          <div className="cs-about-grid">
+            <a
+              className="cs-about-card"
+              href="https://www.linkedin.com/in/michael-renwick-76b5462b/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <span className="cs-about-icon cs-about-icon-li" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+                  <path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z" />
+                </svg>
+              </span>
+              <span className="cs-about-text">
+                <span className="cs-about-title">Connect on LinkedIn ↗</span>
+                <span className="cs-about-sub">Michael Renwick</span>
+              </span>
+            </a>
+            <a className="cs-about-card" href="https://drivkraft.io" target="_blank" rel="noopener noreferrer">
+              <span className="cs-about-icon cs-about-icon-dk" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M6 4v16h5.5a8 8 0 0 0 0-16H6z" />
+                </svg>
+              </span>
+              <span className="cs-about-text">
+                <span className="cs-about-title">Drivkraft ↗</span>
+                <span className="cs-about-sub">drivkraft.io</span>
+              </span>
+            </a>
+          </div>
+          <p className="cs-about-blurb">
+            <strong>Drivkraft</strong> is Danish for the driving force that powers a machine or carries a business
+            or a person forward — and it&apos;s your everyday advisor. It keeps the business owner and their
+            professional advisors aligned and informed.
+          </p>
+          <p className="cs-about-cta">
+            Like what you saw here? <a href="https://drivkraft.io" target="_blank" rel="noopener noreferrer">See what else I&apos;ve built at drivkraft.io ↗</a>
+          </p>
+        </section>
       </div>
 
       <footer className="cs-footer">
@@ -625,6 +676,12 @@ const CASE_STUDY_CSS = `
 .cs-toplinks{display:flex; gap:16px; font-size:13px;}
 .cs-toplinks a{text-decoration:none; color:var(--cs-muted); border-bottom:1px solid transparent;}
 .cs-toplinks a:hover{color:var(--cs-ink); border-color:var(--cs-line);}
+
+.cs-toplinks a.cs-about-link{color:var(--cs-accent-ink); background:var(--cs-accent-soft); padding:3px 10px; border-radius:16px; border:1px solid transparent; font-weight:500;}
+.cs-toplinks a.cs-about-link:hover{color:var(--cs-accent-ink); border-color:var(--cs-accent);}
+@media (max-width:640px){ .cs-toplinks{gap:10px; font-size:12px;} .cs-brand{display:none;} }
+html{scroll-behavior:smooth;}
+.cs section[id]{scroll-margin-top:60px;}
 
 .cs-hero{padding:64px 0 40px;}
 .cs-eyebrow{
@@ -751,6 +808,26 @@ const CASE_STUDY_CSS = `
   background:var(--cs-panel-2); border:1px solid var(--cs-line); border-radius:8px; padding:12px 14px;
   font-family:"IBM Plex Mono"; font-size:12px; overflow-x:auto; margin:10px 0 0; color:var(--cs-ink);
 }
+
+.cs-about-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px;}
+@media (max-width:640px){ .cs-about-grid{grid-template-columns:1fr;} }
+.cs-about-card{
+  display:flex; align-items:center; gap:16px; padding:20px; border:1px solid var(--cs-line); border-radius:12px;
+  background:var(--cs-panel); text-decoration:none; box-shadow:var(--cs-shadow);
+  transition:transform .15s ease, border-color .15s ease;
+}
+.cs-about-card:hover{transform:translateY(-2px); border-color:var(--cs-accent);}
+.cs-about-icon{width:52px; height:52px; border-radius:12px; display:flex; align-items:center; justify-content:center; flex:none; color:#fff;}
+.cs-about-icon svg{width:26px; height:26px;}
+.cs-about-icon-li{background:#0a66c2;}
+.cs-about-icon-dk{background:var(--cs-accent);}
+.cs-about-text{display:flex; flex-direction:column; gap:2px;}
+.cs-about-title{font-family:"Fraunces",Georgia,serif; font-weight:600; font-size:18px; color:var(--cs-ink);}
+.cs-about-sub{font-family:"IBM Plex Mono"; font-size:12.5px; color:var(--cs-muted);}
+.cs-about-blurb{max-width:62ch; color:var(--cs-muted); font-size:15px; margin:0 0 14px;}
+.cs-about-blurb strong{color:var(--cs-ink);}
+.cs-about-cta{font-size:15px; margin:0; font-weight:500;}
+.cs-about-cta a{color:var(--cs-accent-ink); text-decoration:underline; text-underline-offset:3px;}
 
 .cs-credit-list{color:var(--cs-muted); font-size:13.5px; margin:0; padding-left:18px;}
 .cs-credit-list li{margin-bottom:8px;}

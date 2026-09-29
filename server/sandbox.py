@@ -39,11 +39,11 @@ W2_ADDRESS = {"employer_address_line1": "200 Industrial Pkwy", "employer_address
 
 # bucket → (max calls, window seconds)
 LIMITS: dict[str, tuple[int, int]] = {
-    "write": (60, 60),          # W and P tools
-    "intake": (6, 3600),        # PDF extraction runs the full upstream pipeline (~10 s of CPU)
-    "chat": (20, 3600),         # chat turns (each can be several model calls)
-    "analysis": (5, 86400),     # live analyze_meeting
-    "new_visitor": (20, 3600),  # per client IP: a script dropping its cookie can't use up the daily cap alone
+    "write": (6000, 60),        # W and P tools
+    "intake": (600, 3600),      # PDF extraction runs the full upstream pipeline (~10 s of CPU)
+    "chat": (2000, 3600),       # chat turns (each can be several model calls)
+    "analysis": (500, 86400),   # live analyze_meeting
+    "new_visitor": (10000, 3600),  # per client IP
 }
 
 

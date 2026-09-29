@@ -536,10 +536,10 @@ cd web && npm install && npm run dev`}</pre>
           </div>
           <ul className="cs-credit-list">
             <li>
-              <strong>OpenTax</strong> by Filed Inc. — AGPL v3, run unmodified as a subprocess, pinned at v2.0.4.
+              <a href="https://opentax.filed.com" target="_blank" rel="noopener noreferrer"><strong>OpenTax</strong></a> by Filed Inc. — AGPL v3, run unmodified as a subprocess, pinned at v2.0.4.
             </li>
             <li>
-              <strong>Open Tax Document (OTD)</strong> by Tom O&apos;Sullivan, Crimson Tree Software — CC BY 4.0.
+              <a href="https://github.com/opentaxdocument/otd-spec" target="_blank" rel="noopener noreferrer"><strong>Open Tax Document (OTD)</strong></a> by Tom O&apos;Sullivan, Crimson Tree Software — CC BY 4.0.
             </li>
             <li>Visual design borrows from the Drivkraft platform&apos;s slate/blue Tailwind system; fonts are Geist (OFL).</li>
             <li>Independent project — not affiliated with or endorsed by Filed or Crimson Tree Software.</li>
@@ -841,6 +841,7 @@ html{scroll-behavior:smooth;}
 
 .cs-credit-list{color:var(--cs-muted); font-size:13.5px; margin:0; padding-left:18px;}
 .cs-credit-list li{margin-bottom:8px;}
+.cs-credit-list a{color:var(--cs-accent-ink); text-decoration:underline; text-underline-offset:3px;}
 .cs-footer{padding:36px 0 48px; border-top:1px solid var(--cs-line); background:var(--cs-paper);}
 .cs-foot-row{display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; font-size:13px; color:var(--cs-muted);}
 .cs-foot-links{display:flex; gap:16px;}
